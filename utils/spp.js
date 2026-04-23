@@ -2,8 +2,48 @@ const SPP_UUID = '00001101-0000-1000-8000-00805F9B34FB'
 
 let socket = null
 let outputStream = null
+let inputStream = null
 let connectedDeviceId = ''
 let connectedDeviceName = ''
+let receiveTimer = null
+let onReceiveCallback = null
+
+const setOnSppReceive = (callback) => {
+	onReceiveCallback = callback
+}
+
+const stopReceiveTimer = () => {
+	if (receiveTimer) {
+		clearInterval(receiveTimer)
+		receiveTimer = null
+	}
+}
+
+const startReceiveTimer = () => {
+	stopReceiveTimer()
+	receiveTimer = setInterval(() => {
+		if (!isConnected() || !inputStream) {
+			return
+		}
+		try {
+			const available = plus.android.invoke(inputStream, 'available')
+			if (available > 0) {
+				const bytes = []
+				for (let i = 0; i < available; i++) {
+					const b = plus.android.invoke(inputStream, 'read')
+					if (b !== -1) {
+						bytes.push(b)
+					}
+				}
+				if (bytes.length > 0 && typeof onReceiveCallback === 'function') {
+					onReceiveCallback(bytes)
+				}
+			}
+		} catch (error) {
+			// ignore read error
+		}
+	}, 100)
+}
 
 const assertAndroidEnv = () => {
 	if (typeof plus === 'undefined' || !plus.android) {
@@ -47,8 +87,11 @@ const isConnected = () => {
 }
 
 const disconnectSpp = () => {
+	stopReceiveTimer()
+	closeQuietly(inputStream)
 	closeQuietly(outputStream)
 	closeQuietly(socket)
+	inputStream = null
 	outputStream = null
 	socket = null
 	connectedDeviceId = ''
@@ -88,8 +131,10 @@ const connectSpp = (deviceId) => {
 	const uuid = UUID.fromString(SPP_UUID)
 	const connectedSocket = connectSocketInternal(adapter, remoteDevice, uuid)
 	const stream = plus.android.invoke(connectedSocket, 'getOutputStream')
+	const inStream = plus.android.invoke(connectedSocket, 'getInputStream')
 
-	if (!connectedSocket || !stream || !plus.android.invoke(connectedSocket, 'isConnected')) {
+	if (!connectedSocket || !stream || !inStream || !plus.android.invoke(connectedSocket, 'isConnected')) {
+		closeQuietly(inStream)
 		closeQuietly(stream)
 		closeQuietly(connectedSocket)
 		throw new Error('SPP连接未建立成功')
@@ -97,8 +142,11 @@ const connectSpp = (deviceId) => {
 
 	socket = connectedSocket
 	outputStream = stream
+	inputStream = inStream
 	connectedDeviceId = deviceId
 	connectedDeviceName = plus.android.invoke(remoteDevice, 'getName') || ''
+
+	startReceiveTimer()
 }
 
 const getSppState = () => ({
@@ -107,4 +155,80 @@ const getSppState = () => ({
 	deviceName: connectedDeviceName
 })
 
-export {connectSpp, getSppState, disconnectSpp}
+const normalizeHexToken = (token) => {
+	if (!token) {
+		return ''
+	}
+	return token.trim().replace(/^0x/i, '')
+}
+
+const parseHexCommand = (command) => {
+	if (!command || typeof command !== 'string') {
+		throw new Error('命令为空，无法发送')
+	}
+
+	const tokens = command
+		.trim()
+		.split(/\s+/)
+		.filter(Boolean)
+
+	if (!tokens.length) {
+		throw new Error('命令格式错误，无法发送')
+	}
+
+	return tokens.map((token) => {
+		const normalized = normalizeHexToken(token)
+		if (!/^[0-9a-fA-F]{1,2}$/.test(normalized)) {
+			throw new Error(`命令字节格式错误: ${token}`)
+		}
+		return parseInt(normalized, 16)
+	})
+}
+
+const sendSppBytes = (bytes) => {
+	if (!isConnected() || !outputStream) {
+		throw new Error('SPP未连接，无法发送命令')
+	}
+
+	const packetStream = plus.android.newObject('java.io.ByteArrayOutputStream')
+	for (let i = 0; i < bytes.length; i += 1) {
+		plus.android.invoke(packetStream, 'write', Number(bytes[i]))
+	}
+	const payload = plus.android.invoke(packetStream, 'toByteArray')
+	plus.android.invoke(outputStream, 'write', payload, 0, bytes.length)
+	closeQuietly(packetStream)
+	plus.android.invoke(outputStream, 'flush')
+}
+
+const sendSppHexCommand = (command) => {
+	const bytes = parseHexCommand(command)
+	sendSppBytes(bytes)
+}
+
+const calculateCrc16Modbus = (bytes) => {
+	let crc = 0xFFFF
+	for (let i = 0; i < bytes.length; i += 1) {
+		crc ^= Number(bytes[i]) & 0xFF
+		for (let bit = 0; bit < 8; bit += 1) {
+			if ((crc & 0x0001) !== 0) {
+				crc = (crc >> 1) ^ 0xA001
+			} else {
+				crc >>= 1
+			}
+		}
+	}
+	return crc & 0xFFFF
+}
+
+const buildSppHexCommandWithCrc = (payloadCommand) => {
+	const payload = parseHexCommand(payloadCommand)
+	const crc = calculateCrc16Modbus(payload)
+	const low = crc & 0xFF
+	const high = (crc >> 8) & 0xFF
+	const packet = payload.concat([low, high])
+	return packet
+		.map((value) => value.toString(16).toUpperCase().padStart(2, '0'))
+		.join(' ')
+}
+
+export {connectSpp, getSppState, disconnectSpp, sendSppHexCommand, buildSppHexCommandWithCrc, setOnSppReceive}

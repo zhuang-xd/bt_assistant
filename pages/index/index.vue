@@ -295,7 +295,7 @@ onUnload(() => {
 .status {
 	font-size: 26rpx;
 	color: #31415f;
-	margin-bottom: 18rpx;
+	margin-bottom: 18rpx; 
 	word-break: break-all;
 }
 
@@ -330,5 +330,18 @@ onUnload(() => {
 	font-size: 24rpx;
 	color: #5f6f8f;
 	word-break: break-all;
+}
+
+button {
+	width: 100%;
+	height: 88rpx;
+	line-height: 88rpx;
+	border-radius: 16rpx;
+	font-size: 30rpx;
+	font-weight: 600;
+	letter-spacing: 2rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 </style>
