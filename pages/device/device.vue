@@ -257,7 +257,7 @@ const parseFilesCountFromPacket = (bytes) => {
 
 		const low = bytes[i + 7] & 0xFF
 		const high = bytes[i + 8] & 0xFF
-		return (high << 8) | low
+		return low
 	}
 
 	return null
