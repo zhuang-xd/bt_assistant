@@ -283,7 +283,7 @@ const parseCommandResponseHex = (bytes, commandCode) => {
 		// 你的固件版本号从这里开始
 		// 跳过：AA 03 02 15 00 00 0b
 		// ======================
-		const startIndex = i + 7
+		const startIndex = i + 6
 		const versionBytes = []
 		
 		// 读取连续有效ASCII，直到不是可打印字符为止
