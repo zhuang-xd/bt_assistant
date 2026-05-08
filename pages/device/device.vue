@@ -26,6 +26,13 @@
 			</view>
 		</view>
 		<view class="card ">
+			<view class="title">电量</view>
+				<view class="query-result">
+					<view class="query-result-label">电量</view>
+					<view class="query-result-value">{{ batteryLevel }}</view>
+				</view>
+		</view>
+		<view class="card ">
 			<view class="title">查询文件</view>
 			<view class="query-card">
 				<view class="query-result">
@@ -37,6 +44,17 @@
 				</button>
 				<button type="primary" :disabled="isSending" @click="handleQueryFilesCnt">
 					查询
+				</button>
+			</view>
+		</view>
+		<view class="card ">
+			<view class="title">摘下休眠</view>
+			<view class="sleep-card">
+				<button type="primary" :disabled="isSending" @click="handleUpdateWearingOn">
+					开启
+				</button>
+				<button type="primary" :disabled="isSending" @click="handleUpdateWearingOff">
+					关闭
 				</button>
 			</view>
 		</view>
@@ -104,6 +122,7 @@ import {
 const matchedDeviceName = ref('未获取到设备名称')
 const deviceId = ref('')
 const statusText = ref('未连接')
+const batteryLevel = ref('')
 const receivedData = ref('')
 const filesCnt = ref(0)
 const btVersion = ref('未查询')
@@ -123,6 +142,8 @@ const QUERY_FILES_CNT_COMMAND = buildSppHexCommandWithCrc('AA 02 03 07 00 00')
 const QUERY_FILES_CLEAR_COMMAND = buildSppHexCommandWithCrc('AA 02 03 08 00 00')
 const QUERY_BT_VERSION_COMMAND = buildSppHexCommandWithCrc('AA 02 03 14 00 00')
 const QUERY_LINUX_VERSION_COMMAND = buildSppHexCommandWithCrc('AA 02 03 15 00 00')
+const APP_WEARING_ON_COMMAND = buildSppHexCommandWithCrc('AA 02 03 66 00 01 01')
+const APP_WEARING_OFF_COMMAND = buildSppHexCommandWithCrc('AA 02 03 66 00 01 00')
 
 const isAndroidPlusRuntime = () => typeof plus !== 'undefined' && !!plus.android
 
@@ -263,6 +284,28 @@ const parseFilesCountFromPacket = (bytes) => {
 	return null
 }
 
+const parseBatteryLevelFromPacket = (bytes) => {
+	if (!Array.isArray(bytes) || bytes.length < 7) {
+		return null
+	}
+
+	for (let i = 0; i <= bytes.length - 7; i += 1) {
+		const isBatteryPacket =
+			bytes[i] === 0xAA &&
+			bytes[i + 1] === 0x03 &&
+			bytes[i + 2] === 0x02 &&
+			bytes[i + 3] === 0x68
+
+		if (!isBatteryPacket) {
+			continue
+		}
+
+		return bytes[i + 6] & 0xFF
+	}
+
+	return null
+}
+
 // 精准解析杰理/富瀚版本号 ASCII字符串
 const parseCommandResponseHex = (bytes, commandCode) => {
 	if (!Array.isArray(bytes) || bytes.length < 8) {
@@ -280,7 +323,6 @@ const parseCommandResponseHex = (bytes, commandCode) => {
 		if (!match) continue
 
 		// ======================
-		// 你的固件版本号从这里开始
 		// 跳过：AA 03 02 15 00 00 0b
 		// ======================
 		const startIndex = i + 6
@@ -327,6 +369,11 @@ onLoad((options = {}) => {
 	setOnSppReceive((bytes) => {
 		const hexString = bytes.map((b) => b.toString(16).toUpperCase().padStart(2, '0')).join(' ')
 		receivedData.value += hexString + '\n'
+
+		const parsedBatteryLevel = parseBatteryLevelFromPacket(bytes)
+		if (parsedBatteryLevel !== null) {
+			batteryLevel.value = `${parsedBatteryLevel}%`
+		}
 
 		const parsedFilesCount = parseFilesCountFromPacket(bytes)
 		if (parsedFilesCount !== null) {
@@ -384,6 +431,13 @@ const handleQueryBtVersion = () => {
 const handleQueryLinuxVersion = () => {
 	linuxVersion.value = '查询中...'
 	sendCaptureCommand(QUERY_LINUX_VERSION_COMMAND)
+}
+
+const handleUpdateWearingOn = () => {
+	sendCaptureCommand(APP_WEARING_ON_COMMAND)
+}
+const handleUpdateWearingOff = () => {
+	sendCaptureCommand(APP_WEARING_OFF_COMMAND)
 }
 
 const handleSendCustomCommand = () => {
@@ -643,6 +697,13 @@ const handleClearReceivedData = () => {
 		}
 	}
 
+}
+
+.sleep-card {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16rpx;
 }
 
 button {
