@@ -63,6 +63,9 @@
 					查询
 				</button>
 			</view>
+			<button type="primary" :disabled="isSending" @click="handleFormatDevice">
+				格式化
+			</button>
 		</view>
 		<!-- <view class="card ">
 			<view class="title">摘下休眠</view>
@@ -160,8 +163,11 @@ const QUERY_FILES_CNT_COMMAND = buildSppHexCommandWithCrc('AA 02 03 07 00 00')
 const QUERY_FILES_CLEAR_COMMAND = buildSppHexCommandWithCrc('AA 02 03 08 00 00')
 const QUERY_BT_VERSION_COMMAND = buildSppHexCommandWithCrc('AA 02 03 14 00 00')
 const QUERY_LINUX_VERSION_COMMAND = buildSppHexCommandWithCrc('AA 02 03 15 00 00')
+const QUERY_BATTERY_COMMAND = buildSppHexCommandWithCrc('AA 02 03 05 00 00')
 const APP_WEARING_ON_COMMAND = buildSppHexCommandWithCrc('AA 02 03 66 00 01 01')
 const APP_WEARING_OFF_COMMAND = buildSppHexCommandWithCrc('AA 02 03 66 00 01 00')
+const APP_FORMAT_COMMAND = buildSppHexCommandWithCrc('AA 02 03 08 00 00')
+
 
 const isAndroidPlusRuntime = () => typeof plus !== 'undefined' && !!plus.android
 
@@ -303,22 +309,29 @@ const parseFilesCountFromPacket = (bytes) => {
 }
 
 const parseBatteryLevelFromPacket = (bytes) => {
-	if (!Array.isArray(bytes) || bytes.length < 7) {
+	if (!Array.isArray(bytes) || bytes.length < 5) {
 		return null
 	}
 
-	for (let i = 0; i <= bytes.length - 7; i += 1) {
-		const isBatteryPacket =
-			bytes[i] === 0xAA &&
-			bytes[i + 1] === 0x03 &&
-			bytes[i + 2] === 0x02 &&
-			bytes[i + 3] === 0x68
+	for (let i = 0; i <= bytes.length - 5; i += 1) {
+		const isHeader = bytes[i] === 0xAA && bytes[i + 1] === 0x03 && bytes[i + 2] === 0x02
+		if (!isHeader) continue
 
-		if (!isBatteryPacket) {
-			continue
+		const cmd = bytes[i + 3] & 0xFF
+
+		// 支持常见的电量返回格式：0x68 或 0x05（兼容不同固件）
+		if (cmd !== 0x68 && cmd !== 0x05) continue
+
+		// 优先尝试已知偏移：i+6（现有实现），其次 i+5、i+4
+		const candidateOffsets = [6, 5, 4]
+		for (let off of candidateOffsets) {
+			const pos = i + off
+			if (pos < 0 || pos >= bytes.length) continue
+			const val = bytes[pos] & 0xFF
+			if (val >= 0 && val <= 100) {
+				return val
+			}
 		}
-
-		return bytes[i + 6] & 0xFF
 	}
 
 	return null
@@ -408,8 +421,20 @@ onLoad((options = {}) => {
 			linuxVersion.value = linuxVersionResponse
 		}
 	})
-})
 
+
+	// 如果当前已连接，启动时额外查询一次电量（只查询一次，后续由接收回调更新）
+	if (sppState.connected) {
+		setTimeout(() => {
+			try {
+				sendSppHexCommand(QUERY_BATTERY_COMMAND)
+			} catch (err) {
+				// 忽略发送错误
+			}
+		}, 200)
+	}
+
+})
 const sendCaptureCommand = (command) => {
 	if (isSending.value) {
 		return
@@ -452,6 +477,10 @@ const handleSetRecordingDuration = (durationCode) => {
 
 const handleQueryFilesCnt = () => {
 	sendCaptureCommand(QUERY_FILES_CNT_COMMAND)
+}
+
+const handleFormatDevice = () => {
+	sendCaptureCommand(APP_FORMAT_COMMAND)
 }
 
 const handleFilesClear = () => {
