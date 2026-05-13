@@ -23,6 +23,23 @@
 						停止录像
 					</button>
 				</view>
+				<view class="media-card-record">
+					<button type="primary" :disabled="isSending" @click="handleSetRecordingDuration(0)">
+						15s
+					</button>
+					<button class="media-btn btn" type="primary" :disabled="isSending" @click="handleSetRecordingDuration(1)">
+						1min
+					</button>
+					<button class="media-btn btn" type="primary" :disabled="isSending" @click="handleSetRecordingDuration(2)">
+						3min
+					</button>
+					<button class="media-btn btn" type="primary" :disabled="isSending" @click="handleSetRecordingDuration(3)">
+						5min
+					</button>
+					<button class="media-btn btn" type="primary" :disabled="isSending" @click="handleSetRecordingDuration(4)">
+						10min
+					</button>
+				</view>
 			</view>
 		</view>
 		<view class="card ">
@@ -47,7 +64,7 @@
 				</button>
 			</view>
 		</view>
-		<view class="card ">
+		<!-- <view class="card ">
 			<view class="title">摘下休眠</view>
 			<view class="sleep-card">
 				<button type="primary" :disabled="isSending" @click="handleUpdateWearingOn">
@@ -57,7 +74,7 @@
 					关闭
 				</button>
 			</view>
-		</view>
+		</view> -->
 		<view class="card ">
 			<view class="title">版本号</view>
 			<view class="version-card">
@@ -138,6 +155,7 @@ const P2P_OUTPUT_DIR = '_doc/p2p'
 const PHOTO_COMMAND = buildSppHexCommandWithCrc('AA 02 03 60 00 00')
 const START_RECORDING_COMMAND = buildSppHexCommandWithCrc('AA 02 03 61 00 00')
 const STOP_RECORDING_COMMAND = buildSppHexCommandWithCrc('AA 02 03 62 00 00')
+const SET_RECORDING_DURATION_COMMAND_PREFIX = 'AA 02 03 25 00 01'
 const QUERY_FILES_CNT_COMMAND = buildSppHexCommandWithCrc('AA 02 03 07 00 00')
 const QUERY_FILES_CLEAR_COMMAND = buildSppHexCommandWithCrc('AA 02 03 08 00 00')
 const QUERY_BT_VERSION_COMMAND = buildSppHexCommandWithCrc('AA 02 03 14 00 00')
@@ -413,6 +431,23 @@ const handleStartRecording = () => {
 
 const handleStopRecording = () => {
 	sendCaptureCommand(STOP_RECORDING_COMMAND)
+}
+
+const handleSetRecordingDuration = (durationCode) => {
+	const payload = Number(durationCode)
+	if (!Number.isInteger(payload) || payload < 0 || payload > 0xFF) {
+		uni.showToast({
+			title: '录制时长参数无效',
+			icon: 'none'
+		})
+		return
+	}
+
+	sendCaptureCommand(
+		buildSppHexCommandWithCrc(
+			`${SET_RECORDING_DURATION_COMMAND_PREFIX} ${payload.toString(16).toUpperCase().padStart(2, '0')}`
+		)
+	)
 }
 
 const handleQueryFilesCnt = () => {
