@@ -99,6 +99,15 @@
 						查询	
 					</button>
 				</view>
+				<view class="version-item">
+					<view class="query-result">
+						<view class="query-result-label">国新版本</view>
+						<view class="query-result-value version-text">{{ gx8002Version }}</view>
+					</view>
+					<button type="primary" :disabled="isSending" @click="handleQueryGx8002Version">
+						查询	
+					</button>
+				</view>
 			</view>
 		</view>
 		<view class="card">
@@ -147,6 +156,7 @@ const receivedData = ref('')
 const filesCnt = ref(0)
 const btVersion = ref('未查询')
 const linuxVersion = ref('未查询')
+const gx8002Version = ref('未查询')
 const isSending = ref(false)
 const customCommand = ref('AA 02 03 07 00 00 D0 54')
 const FILE_IMPORT_COMMAND = buildSppHexCommandWithCrc('AA 02 03 29 00 00')
@@ -164,6 +174,7 @@ const QUERY_FILES_CLEAR_COMMAND = buildSppHexCommandWithCrc('AA 02 03 08 00 00')
 const QUERY_BT_VERSION_COMMAND = buildSppHexCommandWithCrc('AA 02 03 14 00 00')
 const QUERY_LINUX_VERSION_COMMAND = buildSppHexCommandWithCrc('AA 02 03 15 00 00')
 const QUERY_BATTERY_COMMAND = buildSppHexCommandWithCrc('AA 02 03 05 00 00')
+const QUERY_GX8002_VERSION_COMMAND = buildSppHexCommandWithCrc('AA 02 03 69 00 00')
 const APP_WEARING_ON_COMMAND = buildSppHexCommandWithCrc('AA 02 03 66 00 01 01')
 const APP_WEARING_OFF_COMMAND = buildSppHexCommandWithCrc('AA 02 03 66 00 01 00')
 const APP_FORMAT_COMMAND = buildSppHexCommandWithCrc('AA 02 03 08 00 00')
@@ -420,6 +431,11 @@ onLoad((options = {}) => {
 		if (linuxVersionResponse) {
 			linuxVersion.value = linuxVersionResponse
 		}
+
+		const gx8002VersionResponse = parseCommandResponseHex(bytes, 0x69)
+		if (gx8002VersionResponse) {
+			gx8002Version.value = gx8002VersionResponse
+		}
 	})
 
 
@@ -495,6 +511,11 @@ const handleQueryBtVersion = () => {
 const handleQueryLinuxVersion = () => {
 	linuxVersion.value = '查询中...'
 	sendCaptureCommand(QUERY_LINUX_VERSION_COMMAND)
+}
+
+const handleQueryGx8002Version = () => {
+    gx8002Version.value = '查询中...'
+    sendCaptureCommand(QUERY_GX8002_VERSION_COMMAND)
 }
 
 const handleUpdateWearingOn = () => {
