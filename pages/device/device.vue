@@ -8,6 +8,9 @@
 			<view class="value">{{ deviceId || '未获取到deviceId' }}</view>
 			<view class="label">连接状态</view>
 			<view class="value">{{ statusText }}</view>
+			<button class="guide-btn" type="primary" :disabled="isSending" @click="handleOpenGuide">
+				新手引导
+			</button>
 		</view>
 		<view class="card">
 			<view class="media-card">
@@ -131,6 +134,7 @@
 				清空
 			</button>
 		</view>
+		<guide-popup v-model="showGuide" />
 	</view>
 </template>
 
@@ -141,6 +145,7 @@ import {
 import {
 	onLoad
 } from '@dcloudio/uni-app'
+import GuidePopup from '../../components/guide-popup/guide-popup.vue'
 import {
 	getSppState,
 	sendSppHexCommand,
@@ -158,6 +163,7 @@ const btVersion = ref('未查询')
 const linuxVersion = ref('未查询')
 const gx8002Version = ref('未查询')
 const isSending = ref(false)
+const showGuide = ref(false)
 const customCommand = ref('AA 02 03 07 00 00 D0 54')
 const FILE_IMPORT_COMMAND = buildSppHexCommandWithCrc('AA 02 03 29 00 00')
 const P2P_SERVER_IP = '192.168.49.1'
@@ -549,6 +555,14 @@ const handleSendCustomCommand = () => {
 	}
 }
 
+const handleOpenGuide = () => {
+	showGuide.value = true
+}
+
+const handleCloseGuide = () => {
+	showGuide.value = false
+}
+
 const handleP2PFileTransfer = async () => {
 	if (isSending.value) {
 		return
@@ -657,7 +671,6 @@ const handleClearReceivedData = () => {
 	margin-bottom: 20rpx;
 }
 
-
 .media-card {
 	display: flex;
 	margin: 12rpx;
@@ -704,6 +717,7 @@ const handleClearReceivedData = () => {
 		flex-shrink: 0;
 	}
 }
+
 
 .query-result {
 	display: flex;
