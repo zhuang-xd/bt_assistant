@@ -57,8 +57,17 @@
 				</view>
 			</view>
 		</view>
-		<view class="card ">
+		<view class="card">
 			<view class="title">音效设置</view>
+				<view class="query-card">
+					<view class="query-result">
+						<view class="query-result-label">当前音效</view>
+						<view class="query-result-value">{{ curEq }}</view>
+					</view>
+					<button class="media-btn btn" type="primary" :disabled="isSending" @click="handleGetEQ">
+						查询
+					</button>
+				</view>
 				<view class="general-card">
 					<button class="media-btn btn" type="primary" :disabled="isSending" @click="handleSetEQ(0)">
 						标准
@@ -174,6 +183,7 @@ const deviceId = ref('')
 const statusText = ref('未连接')
 const batteryLevel = ref('--')
 const receivedData = ref('')
+const curEq = ref('')
 const filesCnt = ref(0)
 const btVersion = ref('未查询')
 const linuxVersion = ref('未查询')
@@ -193,6 +203,7 @@ const START_RECORDING_COMMAND = buildSppHexCommandWithCrc('AA 02 03 61 00 00')
 const STOP_RECORDING_COMMAND = buildSppHexCommandWithCrc('AA 02 03 62 00 00')
 const SET_RECORDING_DURATION_COMMAND_PREFIX = 'AA 02 03 25 00 01'
 const SET_EQ_COMMAND_PREFIX = 'AA 02 03 82 00 01'
+const GET_EQ_COMMAND = buildSppHexCommandWithCrc('AA 02 03 83 00 00')
 const QUERY_FILES_CNT_COMMAND = buildSppHexCommandWithCrc('AA 02 03 07 00 00')
 const QUERY_BT_VERSION_COMMAND = buildSppHexCommandWithCrc('AA 02 03 14 00 00')
 const QUERY_LINUX_VERSION_COMMAND = buildSppHexCommandWithCrc('AA 02 03 15 00 00')
@@ -365,6 +376,36 @@ const parseFilesCountFromPacket = (bytes) => {
 	return null
 }
 
+const parseCommandGetEQ = (bytes) => {
+	if (!Array.isArray(bytes) || bytes.length < 9) {
+		return null
+	}
+
+	for (let i = 0; i <= bytes.length - 6; i += 1) {
+		const isFormatDonePacket =
+			bytes[i] === 0xAA &&
+			bytes[i + 1] === 0x03 &&
+			bytes[i + 2] === 0x02 &&
+			bytes[i + 3] === 0x83 &&
+			bytes[i + 4] === 0x00 &&
+			bytes[i + 5] === 0x01
+			
+
+		if (isFormatDonePacket) {
+			const payload = bytes[i + 6];
+			if (payload === 0) {
+				return "标准"
+			} else if (payload === 1) {
+				return "澎湃"
+			} else if (payload === 2) {
+				return "静谧"
+			}
+		}
+	}
+
+	return null
+}
+
 const parseBatteryLevelFromPacket = (bytes) => {
 	if (!Array.isArray(bytes) || bytes.length < 5) {
 		return null
@@ -496,6 +537,11 @@ onLoad((options = {}) => {
 			batteryLevel.value = `${parsedBatteryLevel}%`
 		}
 
+		const parsedCurEq = parseCommandGetEQ(bytes)
+		if (parsedCurEq !== null) {
+			curEq.value = parsedCurEq
+		}
+
 		const parsedFilesCount = parseFilesCountFromPacket(bytes)
 		if (parsedFilesCount !== null) {
 			filesCnt.value = parsedFilesCount
@@ -556,6 +602,11 @@ const handleStartRecording = () => {
 
 const handleStopRecording = () => {
 	sendCaptureCommand(STOP_RECORDING_COMMAND)
+}
+
+const handleGetEQ = () => {
+	curEq.value = '查询中...'
+	sendCaptureCommand(GET_EQ_COMMAND)
 }
 
 const handleSetEQ = (eqCode) => {
@@ -830,6 +881,7 @@ const handleClearReceivedData = () => {
 	display: flex;
 	// flex-direction: column;
 	gap: 20rpx;
+	margin-bottom: 5px;
 
 	.query-result {
 		width: 80%;
