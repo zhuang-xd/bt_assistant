@@ -95,17 +95,6 @@
 				</button>
 			</view>
 		</view>
-		<!-- <view class="card ">
-			<view class="title">摘下休眠</view>
-			<view class="sleep-card">
-				<button type="primary" :disabled="isSending" @click="handleUpdateWearingOn">
-					开启
-				</button>
-				<button type="primary" :disabled="isSending" @click="handleUpdateWearingOff">
-					关闭
-				</button>
-			</view>
-		</view> -->
 		<view class="card ">
 			<view class="title">版本号</view>
 			<view class="version-card">
@@ -193,11 +182,6 @@ const showGuide = ref(false)
 const guideAck = ref(null)
 const customCommand = ref('AA 02 03 07 00 00 D0 54')
 const FILE_IMPORT_COMMAND = buildSppHexCommandWithCrc('AA 02 03 29 00 00')
-const P2P_SERVER_IP = '192.168.49.1'
-const P2P_SERVER_PORT = 8556
-const P2P_CONNECT_TIMEOUT_MS = 6000
-const P2P_READ_TIMEOUT_MS = 3000
-const P2P_OUTPUT_DIR = '_doc/p2p'
 const PHOTO_COMMAND = buildSppHexCommandWithCrc('AA 02 03 60 00 00')
 const START_RECORDING_COMMAND = buildSppHexCommandWithCrc('AA 02 03 61 00 00')
 const STOP_RECORDING_COMMAND = buildSppHexCommandWithCrc('AA 02 03 62 00 00')
@@ -213,118 +197,6 @@ const APP_WEARING_ON_COMMAND = buildSppHexCommandWithCrc('AA 02 03 66 00 01 01')
 const APP_WEARING_OFF_COMMAND = buildSppHexCommandWithCrc('AA 02 03 66 00 01 00')
 const APP_FORMAT_COMMAND = buildSppHexCommandWithCrc('AA 02 03 08 00 00')
 
-
-const isAndroidPlusRuntime = () => typeof plus !== 'undefined' && !!plus.android
-
-const closeAndroidQuietly = (target) => {
-	if (!target) {
-		return
-	}
-	try {
-		plus.android.invoke(target, 'close')
-	} catch (error) {
-		// ignore close errors
-	}
-}
-
-const wait = (ms) => new Promise((resolve) => {
-	setTimeout(resolve, ms)
-})
-
-const ensureP2POutputDirectory = () => new Promise((resolve, reject) => {
-	plus.io.resolveLocalFileSystemURL(
-		'_doc/',
-		(root) => {
-			root.getDirectory(
-				'p2p',
-				{
-					create: true
-				},
-				() => resolve(),
-				(error) => reject(new Error(error?.message || '创建下载目录失败'))
-			)
-		},
-		(error) => reject(new Error(error?.message || '访问本地目录失败'))
-	)
-})
-
-const receiveP2PFileBytes = () => {
-	if (!isAndroidPlusRuntime()) {
-		throw new Error('当前环境不支持P2P下载，请在Android App端运行')
-	}
-
-	let socket = null
-	let inputStream = null
-	let byteArrayOutputStream = null
-
-	try {
-		socket = plus.android.newObject('java.net.Socket')
-		const socketAddress = plus.android.newObject('java.net.InetSocketAddress', P2P_SERVER_IP, P2P_SERVER_PORT)
-		plus.android.invoke(socket, 'connect', socketAddress, P2P_CONNECT_TIMEOUT_MS)
-		plus.android.invoke(socket, 'setSoTimeout', P2P_READ_TIMEOUT_MS)
-
-		inputStream = plus.android.invoke(socket, 'getInputStream')
-		byteArrayOutputStream = plus.android.newObject('java.io.ByteArrayOutputStream')
-
-		let receivedLength = 0
-		while (true) {
-			let nextByte = -1
-			try {
-				nextByte = plus.android.invoke(inputStream, 'read')
-			} catch (error) {
-				const message = String(error?.message || '')
-				if (receivedLength > 0 && /timed out|timeout/i.test(message)) {
-					break
-				}
-				throw error
-			}
-
-			if (nextByte === -1) {
-				break
-			}
-
-			receivedLength += 1
-			plus.android.invoke(byteArrayOutputStream, 'write', nextByte)
-		}
-
-		if (receivedLength <= 0) {
-			throw new Error('未接收到P2P文件数据')
-		}
-
-		const bytes = plus.android.invoke(byteArrayOutputStream, 'toByteArray')
-		return {
-			bytes,
-			length: receivedLength
-		}
-	} finally {
-		closeAndroidQuietly(inputStream)
-		closeAndroidQuietly(byteArrayOutputStream)
-		closeAndroidQuietly(socket)
-	}
-}
-
-const saveP2PFileToLocal = async (javaBytes) => {
-	if (!isAndroidPlusRuntime()) {
-		throw new Error('当前环境不支持保存文件')
-	}
-
-	await ensureP2POutputDirectory()
-
-	const fileName = `p2p_${Date.now()}.bin`
-	const relativePath = `${P2P_OUTPUT_DIR}/${fileName}`
-	const absolutePath = plus.io.convertLocalFileSystemURL(relativePath)
-
-	let outputStream = null
-	try {
-		outputStream = plus.android.newObject('java.io.FileOutputStream', absolutePath)
-		plus.android.invoke(outputStream, 'write', javaBytes)
-		plus.android.invoke(outputStream, 'flush')
-	} finally {
-		closeAndroidQuietly(outputStream)
-	}
-
-	return relativePath
-}
 
 const parseFilesCountFormatFromPacket = (bytes) => {
 	if (!Array.isArray(bytes) || bytes.length < 9) {
@@ -667,13 +539,6 @@ const handleQueryGx8002Version = () => {
     sendCaptureCommand(QUERY_GX8002_VERSION_COMMAND)
 }
 
-const handleUpdateWearingOn = () => {
-	sendCaptureCommand(APP_WEARING_ON_COMMAND)
-}
-const handleUpdateWearingOff = () => {
-	sendCaptureCommand(APP_WEARING_OFF_COMMAND)
-}
-
 const handleSendCustomCommand = () => {
 	const command = customCommand.value.trim()
 	if (!command) {
@@ -704,51 +569,6 @@ const handleOpenGuide = () => {
 
 const handleCloseGuide = () => {
 	showGuide.value = false
-}
-
-const handleP2PFileTransfer = async () => {
-	if (isSending.value) {
-		return
-	}
-
-	if (!isAndroidPlusRuntime()) {
-		uni.showToast({
-			title: '请在Android App端运行',
-			icon: 'none'
-		})
-		return
-	}
-
-	isSending.value = true
-	uni.showLoading({
-		title: 'P2P下载中',
-		mask: true
-	})
-
-	try {
-		sendSppHexCommand(FILE_IMPORT_COMMAND)
-		await wait(400)
-
-		const {
-			bytes,
-			length
-		} = receiveP2PFileBytes()
-		const localPath = await saveP2PFileToLocal(bytes)
-
-		receivedData.value += `[P2P] 已下载 ${length} 字节 -> ${localPath}\n`
-		uni.showToast({
-			title: '下载完成',
-			icon: 'success'
-		})
-	} catch (error) {
-		uni.showToast({
-			title: error?.message || 'P2P下载失败',
-			icon: 'none'
-		})
-	} finally {
-		uni.hideLoading()
-		isSending.value = false
-	}
 }
 
 const handleClearReceivedData = () => {
