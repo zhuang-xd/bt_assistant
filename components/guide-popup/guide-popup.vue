@@ -124,6 +124,7 @@ const handleSwiperChange = (event) => {
 
 const handleClose = () => {
 	emit('update:modelValue', false)
+	sendGuideStep(0, 0)
 }
 </script>
 
