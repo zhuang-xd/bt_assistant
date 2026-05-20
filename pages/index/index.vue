@@ -1,9 +1,14 @@
 <template>
 	<view class="content">
 		<view class="card">
-			<button class="scan-btn" type="primary" @click="handleScanClick" :disabled="isScanning">
-				{{ isScanning ? '搜索中...' : '搜索蓝牙设备' }}
-			</button>
+			<view class="button-group">
+				<button class="scan-btn" type="primary" @click="handleScanClick" :disabled="isScanning">
+					{{ isScanning ? '搜索中...' : '搜索蓝牙设备' }}
+				</button>
+				<button class="skip-btn" type="warn" @click="skipToDevice">
+					skip
+				</button>
+			</view>
 
 			<view class="status">{{ statusText }}</view>
 
@@ -266,6 +271,12 @@ const connectDevice = async (device) => {
 	}
 }
 
+const skipToDevice = () => {
+	uni.navigateTo({
+		url: '/pages/device/device'
+	})
+}
+
 onUnload(() => {
 	isScanning.value = false
 	stopClassicDiscovery()
@@ -288,8 +299,19 @@ onUnload(() => {
 	box-shadow: 0 8rpx 30rpx rgba(26, 44, 80, 0.08);
 }
 
-.scan-btn {
+.button-group {
+	display: flex;
+	gap: 12rpx;
 	margin-bottom: 20rpx;
+}
+
+.scan-btn {
+	grid-column: 1;
+}
+
+.skip-btn {
+	grid-column: 2;
+	width: 20%;
 }
 
 .status {
