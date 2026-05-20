@@ -374,6 +374,36 @@ const decodeParam = (value) => {
 	}
 }
 
+// 将字节数组按帧格式化为带换行的 HEX 字符串：
+// 遇到帧头 AA 03 02 时视为新帧起始，给每帧单独一行
+const formatHexFrames = (bytes) => {
+	if (!Array.isArray(bytes) || bytes.length === 0) return ''
+
+	const hex = (b) => b.toString(16).toUpperCase().padStart(2, '0')
+
+	const starts = []
+	for (let i = 0; i <= bytes.length - 3; i++) {
+		if (bytes[i] === 0xAA && bytes[i + 1] === 0x03 && bytes[i + 2] === 0x02) {
+			starts.push(i)
+		}
+	}
+
+	// 若没有检测到帧头，返回整段十六进制字符串（保持原行为）
+	if (starts.length === 0) {
+		return bytes.map(hex).join(' ')
+	}
+
+	const frames = []
+	for (let k = 0; k < starts.length; k++) {
+		const s = starts[k]
+		const e = k + 1 < starts.length ? starts[k + 1] : bytes.length
+		const slice = bytes.slice(s, e)
+		frames.push(slice.map(hex).join(' '))
+	}
+
+	return frames.join('\n')
+}
+
 onLoad((options = {}) => {
 	const routeDeviceName = decodeParam(options.deviceName)
 	const routeDeviceId = decodeParam(options.deviceId)
@@ -384,8 +414,8 @@ onLoad((options = {}) => {
 	statusText.value = sppState.connected ? '已连接' : '未连接'
 
 	setOnSppReceive((bytes) => {
-		const hexString = bytes.map((b) => b.toString(16).toUpperCase().padStart(2, '0')).join(' ')
-		receivedData.value += hexString + '\n'
+		const formatted = formatHexFrames(bytes)
+		receivedData.value += formatted + '\n'
 
 		const guideAckResponse = parseGuideAckFromPacket(bytes)
 		if (guideAckResponse) {
