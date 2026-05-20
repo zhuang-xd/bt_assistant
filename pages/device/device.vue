@@ -158,28 +158,6 @@ const parseFilesCountFromPacket = (bytes) => {
 	return null
 }
 
-const parseCommandGetEQ = (bytes) => {
-	if (!Array.isArray(bytes) || bytes.length < 9) {
-		return null
-	}
-
-	for (let i = 0; i <= bytes.length - 6; i += 1) {
-		const isFormatDonePacket =
-			bytes[i] === 0xAA &&
-			bytes[i + 1] === 0x03 &&
-			bytes[i + 2] === 0x02 &&
-			bytes[i + 3] === 0x83 &&
-			bytes[i + 4] === 0x00 &&
-			bytes[i + 5] === 0x01
-
-
-		if (isFormatDonePacket) {
-			return bytes[i + 6];
-		}
-	}
-
-	return null
-}
 
 const parseBatteryLevelFromPacket = (bytes) => {
 	if (!Array.isArray(bytes) || bytes.length < 5) {
@@ -250,30 +228,6 @@ const parseCommandVersion = (bytes, commandCode) => {
 	return null
 }
 
-const parseGuideAckFromPacket = (bytes) => {
-	if (!Array.isArray(bytes) || bytes.length < 8) {
-		return null
-	}
-
-	for (let i = 0; i <= bytes.length - 8; i += 1) {
-		const isGuideAck =
-			bytes[i] === 0xAA &&
-			bytes[i + 1] === 0x03 &&
-			bytes[i + 2] === 0x02 &&
-			bytes[i + 3] === 0x81
-
-		if (!isGuideAck) {
-			continue
-		}
-
-		return {
-			step: bytes[i + 6] & 0xFF,
-			result: bytes[i + 7] & 0xFF
-		}
-	}
-
-	return null
-}
 
 const decodeParam = (value) => {
 	if (!value) {
@@ -325,53 +279,92 @@ onLoad((options = {}) => {
 	deviceId.value = routeDeviceId || sppState.deviceId || ''
 	statusText.value = sppState.connected ? '已连接' : '未连接'
 
-	setOnSppReceive((bytes) => {
+	// 命令处理器映射
+	const commandHandlers = {
+		0x05: (bytes) => {
+			// 查询电池电量
+			const level = parseBatteryLevelFromPacket(bytes)
+			if (level !== null) {
+				batteryLevel.value = `${level}%`
+			}
+		},
+		0x07: (bytes) => {
+			// 查询文件数量
+			const count = parseFilesCountFromPacket(bytes)
+			if (count !== null) {
+				filesCnt.value = count
+			}
+		},
+		0x08: (bytes) => {
+			// 格式化完成
+			const format = parseFilesCountFormatFromPacket(bytes)
+			if (format === '1') {
+				filesCnt.value = 0
+			}
+		},
+		0x14: (bytes) => {
+			// BT 版本
+			const version = parseCommandVersion(bytes, 0x14)
+			if (version) {
+				btVersion.value = version
+			}
+		},
+		0x15: (bytes) => {
+			// Linux 版本
+			const version = parseCommandVersion(bytes, 0x15)
+			if (version) {
+				linuxVersion.value = version
+			}
+		},
+		0x68: (bytes) => {
+			// 主动上报电池电量
+			const level = parseBatteryLevelFromPacket(bytes)
+			if (level !== null) {
+				batteryLevel.value = `${level}%`
+			}
+		},
+		0x69: (bytes) => {
+			// GX8002 版本
+			const version = parseCommandVersion(bytes, 0x69)
+			if (version) {
+				gx8002Version.value = version
+			}
+		},
+		0x81: (bytes, index) => {
+			// 指南确认
+			guideAck.value = {
+				step: bytes[index + 6] & 0xFF,
+				result: bytes[index + 7] & 0xFF,
+				receivedAt: Date.now()
+			}
+		},
+		0x83: (bytes, index) => {
+			// Get EQ 响应
+			const eqValue = bytes[index + 6]
+			if (eqValue !== undefined) {
+				selectedEq.value = eqValue
+			}
+		},
+	}
+
+	// 处理接收到的 SPP 数据
+	const processSppDataFrame = (bytes) => {
 		const formatted = formatHexFrames(bytes)
 		receivedData.value += formatted + '\n'
 
-		const guideAckResponse = parseGuideAckFromPacket(bytes)
-		if (guideAckResponse) {
-			guideAck.value = {
-				...guideAckResponse,
-				receivedAt: Date.now()
+		// 查找所有帧头并处理
+		for (let i = 0; i <= bytes.length - 4; i++) {
+			if (bytes[i] === 0xAA && bytes[i + 1] === 0x03 && bytes[i + 2] === 0x02) {
+				const commandCode = bytes[i + 3]
+				const handler = commandHandlers[commandCode]
+				if (handler) {
+					handler(bytes, i)
+				}
 			}
 		}
+	}
 
-		const parsedBatteryLevel = parseBatteryLevelFromPacket(bytes)
-		if (parsedBatteryLevel !== null) {
-			batteryLevel.value = `${parsedBatteryLevel}%`
-		}
-
-		const parsedCurEq = parseCommandGetEQ(bytes)
-		if (parsedCurEq !== null) {
-			selectedEq.value = parsedCurEq
-		}
-
-		const parsedFilesCount = parseFilesCountFromPacket(bytes)
-		if (parsedFilesCount !== null) {
-			filesCnt.value = parsedFilesCount
-		}
-
-		const parsedFilesCountFormat = parseFilesCountFormatFromPacket(bytes)
-		if (parsedFilesCountFormat === '1') {
-			filesCnt.value = 0
-		}
-
-		const btVersionResponse = parseCommandVersion(bytes, 0x14)
-		if (btVersionResponse) {
-			btVersion.value = btVersionResponse
-		}
-
-		const linuxVersionResponse = parseCommandVersion(bytes, 0x15)
-		if (linuxVersionResponse) {
-			linuxVersion.value = linuxVersionResponse
-		}
-
-		const gx8002VersionResponse = parseCommandVersion(bytes, 0x69)
-		if (gx8002VersionResponse) {
-			gx8002Version.value = gx8002VersionResponse
-		}
-	})
+	setOnSppReceive(processSppDataFrame)
 
 
 	// 如果当前已连接，启动时额外查询一次电量（只查询一次，后续由接收回调更新）
