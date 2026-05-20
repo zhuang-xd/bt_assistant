@@ -1,49 +1,17 @@
 <template>
 	<view class="content">
-		<card-device-info 
-			:device-name="matchedDeviceName"
-			:device-id="deviceId"
-			:status-text="statusText"
-			:battery-level="batteryLevel"
-			:is-sending="isSending"
-			@openGuide="handleOpenGuide"
-		/>
-		<card-media-control 
-			:is-sending="isSending"
-			@takePhoto="handleTakePhoto"
-			@startRecording="handleStartRecording"
-			@stopRecording="handleStopRecording"
-			@setDuration="handleSetRecordingDuration"
-		/>
-		<card-eq-settings 
-			:selected-eq="selectedEq"
-			:is-sending="isSending"
-			@setEq="handleSetEQ"
-		/>
-		<card-file-query 
-			:files-cnt="filesCnt"
-			:is-sending="isSending"
-			@query="handleQueryFilesCnt"
-			@format="handleFormatDevice"
-		/>
-		<card-version-info 
-			:bt-version="btVersion"
-			:linux-version="linuxVersion"
-			:gx8002-version="gx8002Version"
-			:is-sending="isSending"
-			@queryBt="handleQueryBtVersion"
-			@queryLinux="handleQueryLinuxVersion"
-			@queryGx8002="handleQueryGx8002Version"
-		/>
-		<card-data-sender 
-			v-model="customCommand"
-			:is-sending="isSending"
-			@send="handleSendCustomCommand"
-		/>
-		<card-data-receiver 
-			:received-data="receivedData"
-			@clear="handleClearReceivedData"
-		/>
+		<card-device-info :device-name="matchedDeviceName" :device-id="deviceId" :status-text="statusText"
+			:battery-level="batteryLevel" :is-sending="isSending" @openGuide="handleOpenGuide" />
+		<card-media-control :is-sending="isSending" @takePhoto="handleTakePhoto" @startRecording="handleStartRecording"
+			@stopRecording="handleStopRecording" @setDuration="handleSetRecordingDuration" />
+		<card-eq-settings :selected-eq="selectedEq" :is-sending="isSending" @setEq="handleSetEQ" />
+		<card-file-query :files-cnt="filesCnt" :is-sending="isSending" @query="handleQueryFilesCnt"
+			@format="handleFormatDevice" />
+		<card-version-info :bt-version="btVersion" :linux-version="linuxVersion" :gx8002-version="gx8002Version"
+			:is-sending="isSending" @queryBt="handleQueryBtVersion" @queryLinux="handleQueryLinuxVersion"
+			@queryGx8002="handleQueryGx8002Version" />
+		<card-data-sender v-model="customCommand" :is-sending="isSending" @send="handleSendCustomCommand" />
+		<card-data-receiver :received-data="receivedData" @clear="handleClearReceivedData" />
 		<guide-popup v-model="showGuide" :guide-ack="guideAck" />
 	</view>
 </template>
@@ -86,20 +54,20 @@ const guideAck = ref(null)
 const customCommand = ref('AA 02 03 07 00 00 D0 54')
 
 const COMMAND_CODES = {
-	QUERY_BATTERY: 			'05',
-	QUERY_FILES_CNT: 		'07',
-	APP_FORMAT: 			'08',
-	QUERY_BT_VERSION: 		'14',
-	QUERY_LINUX_VERSION:	'15',
-	SET_RECORDING_DURATION:	'25',
-	FILE_IMPORT: 			'29',
-	PHOTO: 					'60',
-	START_RECORDING: 		'61',
-	STOP_RECORDING: 		'62',
-	APP_WEARING: 			'66',
-	QUERY_GX8002_VERSION:	'69',
-	SET_EQ: 				'82',
-	GET_EQ: 				'83',
+	QUERY_BATTERY: '05',
+	QUERY_FILES_CNT: '07',
+	APP_FORMAT: '08',
+	QUERY_BT_VERSION: '14',
+	QUERY_LINUX_VERSION: '15',
+	SET_RECORDING_DURATION: '25',
+	FILE_IMPORT: '29',
+	PHOTO: '60',
+	START_RECORDING: '61',
+	STOP_RECORDING: '62',
+	APP_WEARING: '66',
+	QUERY_GX8002_VERSION: '69',
+	SET_EQ: '82',
+	GET_EQ: '83',
 }
 
 // 生成完整命令的辅助函数
