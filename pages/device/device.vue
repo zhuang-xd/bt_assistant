@@ -3,8 +3,8 @@
 		<card-device-info :device-name="matchedDeviceName" :device-id="deviceId" :status-text="statusText"
 			:battery-level="batteryLevel" :is-sending="isSending" @openGuide="handleOpenGuide" />
 		<card-media-control :is-sending="isSending" @takePhoto="handleTakePhoto" @startRecording="handleStartRecording"
-			@stopRecording="handleStopRecording" @setDuration="handleSetRecordingDuration" />
 		<card-eq-settings :selected-eq="selectedEq" :is-sending="isSending" @setEq="handleSetEQ" />
+			@stopRecording="handleStopRecording" @setDuration="handleSetRecordingDuration" />
 		<card-file-query :files-cnt="filesCnt" :is-sending="isSending" @query="handleQueryFilesCnt"
 			@format="handleFormatDevice" />
 		<card-version-info :bt-version="btVersion" :linux-version="linuxVersion" :gx8002-version="gx8002Version"
@@ -389,7 +389,15 @@ const handleSetEQ = (eqCode) => {
 
 const handleSetRecordingDuration = (durationCode) => {
 	const payload = Number(durationCode)
-	if (!Number.isInteger(payload) || payload < 0 || payload > 0xFF) {
+	
+	// 0 = 未设置，不发送命令
+	if (payload === 0) {
+		return
+	}
+	
+	// 转换为原来的值（减1）
+	const actualValue = payload - 1
+	if (!Number.isInteger(actualValue) || actualValue < 0 || actualValue > 0xFF) {
 		uni.showToast({
 			title: '录制时长参数无效',
 			icon: 'none'
@@ -397,7 +405,7 @@ const handleSetRecordingDuration = (durationCode) => {
 		return
 	}
 
-	const durationHex = payload.toString(16).toUpperCase().padStart(2, '0')
+	const durationHex = actualValue.toString(16).toUpperCase().padStart(2, '0')
 	sendCaptureCommand(buildCommand(COMMAND_CODES.SET_RECORDING_DURATION, '01', durationHex))
 }
 

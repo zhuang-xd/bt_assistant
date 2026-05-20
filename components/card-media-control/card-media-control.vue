@@ -22,7 +22,7 @@
 					class="duration-slider"
 					:value="currentDuration"
 					:min="0"
-					:max="4"
+					:max="5"
 					:step="1"
 					:disabled="isSending"
 					@change="handleDurationChange"
@@ -49,7 +49,7 @@ defineProps({
 
 const emit = defineEmits(['takePhoto', 'startRecording', 'stopRecording', 'setDuration'])
 
-const durationOptions = ['15秒', '1分钟', '3分钟', '5分钟', '10分钟']
+const durationOptions = ['未设置', '15秒', '1分钟', '3分钟', '5分钟', '10分钟']
 const currentDuration = ref(0)
 
 const handleDurationChange = (event) => {
@@ -148,7 +148,7 @@ button {
 
 .duration-marks {
 	display: grid;
-	grid-template-columns: repeat(5, 1fr);
+	grid-template-columns: repeat(6, 1fr);
 	margin-top: 12rpx;
 	width: 100%;
 	margin-left: auto;
