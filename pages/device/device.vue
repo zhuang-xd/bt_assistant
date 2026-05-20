@@ -84,22 +84,29 @@ const isSending = ref(false)
 const showGuide = ref(false)
 const guideAck = ref(null)
 const customCommand = ref('AA 02 03 07 00 00 D0 54')
-const FILE_IMPORT_COMMAND = buildSppHexCommandWithCrc('AA 02 03 29 00 00')
-const PHOTO_COMMAND = buildSppHexCommandWithCrc('AA 02 03 60 00 00')
-const START_RECORDING_COMMAND = buildSppHexCommandWithCrc('AA 02 03 61 00 00')
-const STOP_RECORDING_COMMAND = buildSppHexCommandWithCrc('AA 02 03 62 00 00')
-const SET_RECORDING_DURATION_COMMAND_PREFIX = 'AA 02 03 25 00 01'
-const SET_EQ_COMMAND_PREFIX = 'AA 02 03 82 00 01'
-const GET_EQ_COMMAND = buildSppHexCommandWithCrc('AA 02 03 83 00 00')
-const QUERY_FILES_CNT_COMMAND = buildSppHexCommandWithCrc('AA 02 03 07 00 00')
-const QUERY_BT_VERSION_COMMAND = buildSppHexCommandWithCrc('AA 02 03 14 00 00')
-const QUERY_LINUX_VERSION_COMMAND = buildSppHexCommandWithCrc('AA 02 03 15 00 00')
-const QUERY_BATTERY_COMMAND = buildSppHexCommandWithCrc('AA 02 03 05 00 00')
-const QUERY_GX8002_VERSION_COMMAND = buildSppHexCommandWithCrc('AA 02 03 69 00 00')
-const APP_WEARING_ON_COMMAND = buildSppHexCommandWithCrc('AA 02 03 66 00 01 01')
-const APP_WEARING_OFF_COMMAND = buildSppHexCommandWithCrc('AA 02 03 66 00 01 00')
-const APP_FORMAT_COMMAND = buildSppHexCommandWithCrc('AA 02 03 08 00 00')
 
+const COMMAND_CODES = {
+	QUERY_BATTERY: 			'05',
+	QUERY_FILES_CNT: 		'07',
+	APP_FORMAT: 			'08',
+	QUERY_BT_VERSION: 		'14',
+	QUERY_LINUX_VERSION:	'15',
+	SET_RECORDING_DURATION:	'25',
+	FILE_IMPORT: 			'29',
+	PHOTO: 					'60',
+	START_RECORDING: 		'61',
+	STOP_RECORDING: 		'62',
+	APP_WEARING: 			'66',
+	QUERY_GX8002_VERSION:	'69',
+	SET_EQ: 				'82',
+	GET_EQ: 				'83',
+}
+
+// 生成完整命令的辅助函数
+const buildCommand = (code, len = '00', data = '') => {
+	const cmd = `AA 02 03 ${code} 00 ${len}${data ? ` ${data}` : ''}`
+	return buildSppHexCommandWithCrc(cmd)
+}
 
 const parseFilesCountFormatFromPacket = (bytes) => {
 	if (!Array.isArray(bytes) || bytes.length < 9) {
@@ -371,8 +378,8 @@ onLoad((options = {}) => {
 	if (sppState.connected) {
 		setTimeout(() => {
 			try {
-				sendSppHexCommand(QUERY_BATTERY_COMMAND)
-				sendSppHexCommand(GET_EQ_COMMAND)
+				sendSppHexCommand(buildCommand(COMMAND_CODES.QUERY_BATTERY))
+				sendSppHexCommand(buildCommand(COMMAND_CODES.GET_EQ))
 			} catch (err) {
 				// 忽略发送错误
 			}
@@ -392,15 +399,15 @@ const sendCaptureCommand = (command) => {
 }
 
 const handleTakePhoto = () => {
-	sendCaptureCommand(PHOTO_COMMAND)
+	sendCaptureCommand(buildCommand(COMMAND_CODES.PHOTO))
 }
 
 const handleStartRecording = () => {
-	sendCaptureCommand(START_RECORDING_COMMAND)
+	sendCaptureCommand(buildCommand(COMMAND_CODES.START_RECORDING))
 }
 
 const handleStopRecording = () => {
-	sendCaptureCommand(STOP_RECORDING_COMMAND)
+	sendCaptureCommand(buildCommand(COMMAND_CODES.STOP_RECORDING))
 }
 
 const handleSetEQ = (eqCode) => {
@@ -415,11 +422,8 @@ const handleSetEQ = (eqCode) => {
 
 	selectedEq.value = payload
 
-	sendCaptureCommand(
-		buildSppHexCommandWithCrc(
-			`${SET_EQ_COMMAND_PREFIX} ${payload.toString(16).toUpperCase().padStart(2, '0')}`
-		)
-	)
+	const eqHex = payload.toString(16).toUpperCase().padStart(2, '0')
+	sendCaptureCommand(buildCommand(COMMAND_CODES.SET_EQ, '01', eqHex))
 }
 
 const handleSetRecordingDuration = (durationCode) => {
@@ -432,35 +436,32 @@ const handleSetRecordingDuration = (durationCode) => {
 		return
 	}
 
-	sendCaptureCommand(
-		buildSppHexCommandWithCrc(
-			`${SET_RECORDING_DURATION_COMMAND_PREFIX} ${payload.toString(16).toUpperCase().padStart(2, '0')}`
-		)
-	)
+	const durationHex = payload.toString(16).toUpperCase().padStart(2, '0')
+	sendCaptureCommand(buildCommand(COMMAND_CODES.SET_RECORDING_DURATION, '01', durationHex))
 }
 
 const handleQueryFilesCnt = () => {
 	filesCnt.value = '查询中...'
-	sendCaptureCommand(QUERY_FILES_CNT_COMMAND)
+	sendCaptureCommand(buildCommand(COMMAND_CODES.QUERY_FILES_CNT))
 }
 
 const handleFormatDevice = () => {
-	sendCaptureCommand(APP_FORMAT_COMMAND)
+	sendCaptureCommand(buildCommand(COMMAND_CODES.FORMAT_DEVICE))
 }
 
 const handleQueryBtVersion = () => {
 	btVersion.value = '查询中...'
-	sendCaptureCommand(QUERY_BT_VERSION_COMMAND)
+	sendCaptureCommand(buildCommand(COMMAND_CODES.QUERY_BT_VERSION))
 }
 
 const handleQueryLinuxVersion = () => {
 	linuxVersion.value = '查询中...'
-	sendCaptureCommand(QUERY_LINUX_VERSION_COMMAND)
+	sendCaptureCommand(buildCommand(COMMAND_CODES.QUERY_LINUX_VERSION))
 }
 
 const handleQueryGx8002Version = () => {
 	gx8002Version.value = '查询中...'
-	sendCaptureCommand(QUERY_GX8002_VERSION_COMMAND)
+	sendCaptureCommand(buildCommand(COMMAND_CODES.QUERY_GX8002_VERSION))
 }
 
 const handleSendCustomCommand = () => {
@@ -489,10 +490,6 @@ const handleSendCustomCommand = () => {
 
 const handleOpenGuide = () => {
 	showGuide.value = true
-}
-
-const handleCloseGuide = () => {
-	showGuide.value = false
 }
 
 const handleClearReceivedData = () => {
