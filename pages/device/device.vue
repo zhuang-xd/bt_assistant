@@ -39,19 +39,23 @@
 					</button>
 				</view>
 				<view class="general-card">
-					<button type="primary" :disabled="isSending" @click="handleSetRecordingDuration(0)">
+					<button class="media-btn btn" type="primary" :disabled="isSending " @click="handleSetRecordingDuration(0)">
 						15s
 					</button>
-					<button class="media-btn btn" type="primary" :disabled="isSending" @click="handleSetRecordingDuration(1)">
+					<button class="media-btn btn" type="primary" :disabled="isSending"
+						@click="handleSetRecordingDuration(1)">
 						1min
 					</button>
-					<button class="media-btn btn" type="primary" :disabled="isSending" @click="handleSetRecordingDuration(2)">
+					<button class="media-btn btn" type="primary" :disabled="isSending"
+						@click="handleSetRecordingDuration(2)">
 						3min
 					</button>
-					<button class="media-btn btn" type="primary" :disabled="isSending" @click="handleSetRecordingDuration(3)">
+					<button class="media-btn btn" type="primary" :disabled="isSending"
+						@click="handleSetRecordingDuration(3)">
 						5min
 					</button>
-					<button class="media-btn btn" type="primary" :disabled="isSending" @click="handleSetRecordingDuration(4)">
+					<button class="media-btn btn" type="primary" :disabled="isSending"
+						@click="handleSetRecordingDuration(4)">
 						10min
 					</button>
 				</view>
@@ -59,26 +63,20 @@
 		</view>
 		<view class="card">
 			<view class="title">音效设置</view>
-				<view class="query-card">
-					<view class="query-result">
-						<view class="query-result-label">当前音效</view>
-						<view class="query-result-value">{{ curEq }}</view>
-					</view>
-					<button class="media-btn btn" type="primary" :disabled="isSending" @click="handleGetEQ">
-						查询
-					</button>
-				</view>
-				<view class="general-card">
-					<button class="media-btn btn" type="primary" :disabled="isSending" @click="handleSetEQ(0)">
-						标准
-					</button>
-					<button class="media-btn btn" type="primary" :disabled="isSending" @click="handleSetEQ(1)">
-						澎湃
-					</button>
-					<button class="media-btn btn" type="primary" :disabled="isSending" @click="handleSetEQ(2)">
-						静谧
-					</button>
-				</view>
+			<view class="general-card">
+				<button class="media-btn btn eq-btn" :class="{ active: selectedEq === 0 }" type="primary"
+					:disabled="isSending" @click="handleSetEQ(0)">
+					标准
+				</button>
+				<button class="media-btn btn eq-btn" :class="{ active: selectedEq === 1 }" type="primary"
+					:disabled="isSending" @click="handleSetEQ(1)">
+					澎湃
+				</button>
+				<button class="media-btn btn eq-btn" :class="{ active: selectedEq === 2 }" type="primary"
+					:disabled="isSending" @click="handleSetEQ(2)">
+					静谧
+				</button>
+			</view>
 		</view>
 		<view class="card ">
 			<view class="title">查询文件</view>
@@ -113,7 +111,7 @@
 						<view class="query-result-value version-text">{{ linuxVersion }}</view>
 					</view>
 					<button type="primary" :disabled="isSending" @click="handleQueryLinuxVersion">
-						查询	
+						查询
 					</button>
 				</view>
 				<view class="version-item">
@@ -122,7 +120,7 @@
 						<view class="query-result-value version-text">{{ gx8002Version }}</view>
 					</view>
 					<button type="primary" :disabled="isSending" @click="handleQueryGx8002Version">
-						查询	
+						查询
 					</button>
 				</view>
 			</view>
@@ -172,7 +170,7 @@ const deviceId = ref('')
 const statusText = ref('未连接')
 const batteryLevel = ref('--')
 const receivedData = ref('')
-const curEq = ref('')
+const selectedEq = ref(null)
 const filesCnt = ref(0)
 const btVersion = ref('未查询')
 const linuxVersion = ref('未查询')
@@ -261,17 +259,10 @@ const parseCommandGetEQ = (bytes) => {
 			bytes[i + 3] === 0x83 &&
 			bytes[i + 4] === 0x00 &&
 			bytes[i + 5] === 0x01
-			
+
 
 		if (isFormatDonePacket) {
-			const payload = bytes[i + 6];
-			if (payload === 0) {
-				return "标准"
-			} else if (payload === 1) {
-				return "澎湃"
-			} else if (payload === 2) {
-				return "静谧"
-			}
+			return bytes[i + 6];
 		}
 	}
 
@@ -317,9 +308,9 @@ const parseCommandVersion = (bytes, commandCode) => {
 		// 匹配协议头 AA 03 02 + 指令码
 		const match =
 			bytes[i] === 0xAA &&
-			bytes[i+1] === 0x03 &&
-			bytes[i+2] === 0x02 &&
-			bytes[i+3] === commandCode
+			bytes[i + 1] === 0x03 &&
+			bytes[i + 2] === 0x02 &&
+			bytes[i + 3] === commandCode
 
 		if (!match) continue
 
@@ -328,7 +319,7 @@ const parseCommandVersion = (bytes, commandCode) => {
 		// ======================
 		const startIndex = i + 6
 		const versionBytes = []
-		
+
 		// 读取连续有效ASCII，直到不是可打印字符为止
 		for (let j = startIndex; j < bytes.length; j++) {
 			const b = bytes[j]
@@ -411,14 +402,14 @@ onLoad((options = {}) => {
 
 		const parsedCurEq = parseCommandGetEQ(bytes)
 		if (parsedCurEq !== null) {
-			curEq.value = parsedCurEq
+			selectedEq.value = parsedCurEq
 		}
 
 		const parsedFilesCount = parseFilesCountFromPacket(bytes)
 		if (parsedFilesCount !== null) {
 			filesCnt.value = parsedFilesCount
 		}
-		
+
 		const parsedFilesCountFormat = parseFilesCountFormatFromPacket(bytes)
 		if (parsedFilesCountFormat === '1') {
 			filesCnt.value = 0
@@ -446,6 +437,7 @@ onLoad((options = {}) => {
 		setTimeout(() => {
 			try {
 				sendSppHexCommand(QUERY_BATTERY_COMMAND)
+				sendSppHexCommand(GET_EQ_COMMAND)
 			} catch (err) {
 				// 忽略发送错误
 			}
@@ -476,11 +468,6 @@ const handleStopRecording = () => {
 	sendCaptureCommand(STOP_RECORDING_COMMAND)
 }
 
-const handleGetEQ = () => {
-	curEq.value = '查询中...'
-	sendCaptureCommand(GET_EQ_COMMAND)
-}
-
 const handleSetEQ = (eqCode) => {
 	const payload = Number(eqCode)
 	if (!Number.isInteger(payload) || payload < 0 || payload > 0xFF) {
@@ -490,6 +477,8 @@ const handleSetEQ = (eqCode) => {
 		})
 		return
 	}
+
+	selectedEq.value = payload
 
 	sendCaptureCommand(
 		buildSppHexCommandWithCrc(
@@ -535,8 +524,8 @@ const handleQueryLinuxVersion = () => {
 }
 
 const handleQueryGx8002Version = () => {
-    gx8002Version.value = '查询中...'
-    sendCaptureCommand(QUERY_GX8002_VERSION_COMMAND)
+	gx8002Version.value = '查询中...'
+	sendCaptureCommand(QUERY_GX8002_VERSION_COMMAND)
 }
 
 const handleSendCustomCommand = () => {
@@ -696,6 +685,17 @@ const handleClearReceivedData = () => {
 	width: 100%;
 }
 
+.eq-btn {
+	opacity: 0.3;
+	transition: all 0.18s ease;
+
+	&.active {
+		opacity: 1;
+		transform: translateY(-1rpx);
+		box-shadow: 0 8rpx 18rpx rgba(31, 78, 216, 0.18);
+	}
+}
+
 
 .query-card {
 	display: flex;
@@ -776,15 +776,16 @@ const handleClearReceivedData = () => {
 	display: flex;
 	flex-direction: column;
 	gap: 20rpx;
-	
+
 	.version-item {
 		display: flex;
 		flex-direction: row;
+
 		.query-result {
 			display: flex;
 			width: 80%;
 		}
-	
+
 		button {
 			width: 20%;
 			flex-shrink: 0;
