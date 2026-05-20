@@ -12,7 +12,7 @@
 			@queryGx8002="handleQueryGx8002Version" />
 		<card-data-sender v-model="customCommand" :is-sending="isSending" @send="handleSendCustomCommand" />
 		<card-data-receiver :received-data="receivedData" @clear="handleClearReceivedData" />
-		<guide-popup v-model="showGuide" :guide-ack="guideAck" />
+		<tutorial v-model="showGuide" :guide-ack="guideAck" />
 	</view>
 </template>
 
@@ -23,7 +23,7 @@ import {
 import {
 	onLoad
 } from '@dcloudio/uni-app'
-import GuidePopup from '../../components/guide-popup/guide-popup.vue'
+import Tutorial from '../../components/tutorial/tutorial.vue'
 import CardDeviceInfo from '../../components/card-device-info/card-device-info.vue'
 import CardMediaControl from '../../components/card-media-control/card-media-control.vue'
 import CardEqSettings from '../../components/card-eq-settings/card-eq-settings.vue'
