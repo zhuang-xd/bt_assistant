@@ -2,8 +2,8 @@
 	<view class="content">
 		<card-device-info :device-name="matchedDeviceName" :device-id="deviceId" :status-text="statusText"
 			:battery-level="batteryLevel" :is-sending="isSending" @openGuide="handleOpenGuide" />
-		<card-media-control :is-sending="isSending" @takePhoto="handleTakePhoto" @startRecording="handleStartRecording"
 		<card-eq-settings :selected-eq="selectedEq" :is-sending="isSending" @setEq="handleSetEQ" />
+		<card-media-control :is-sending="isSending" @takePhoto="handleTakePhoto" @startRecording="handleStartRecording"
 			@stopRecording="handleStopRecording" @setDuration="handleSetRecordingDuration" />
 		<card-file-query :files-cnt="filesCnt" :is-sending="isSending" @query="handleQueryFilesCnt"
 			@format="handleFormatDevice" />
