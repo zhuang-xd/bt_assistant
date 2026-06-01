@@ -111,52 +111,52 @@
 
 	const handleSetEq = (mode) => {
 		selectedEq.value = mode
-		uni.showToast({ duration: 1500, title: `已切换音效: ${['标准', '澎湃', '静谧'][mode]}`, icon: 'none' })
+		uni.showToast({ duration: 500, title: `已切换音效: ${['标准', '澎湃', '静谧'][mode]}`, icon: 'none' })
 	}
 
 	const handleQueryFiles = () => {
-		uni.showToast({ duration: 1500, title: '查询文件列表', icon: 'none' })
+		uni.showToast({ duration: 500, title: '查询文件列表', icon: 'none' })
 	}
 
 	const handleFormatFiles = () => {
 		filesCnt.value = 0
-		uni.showToast({ duration: 1500, title: '已清空', icon: 'none' })
+		uni.showToast({ duration: 500, title: '已清空', icon: 'none' })
 	}
 
 	const handleQueryBt = () => {
-		uni.showToast({ duration: 1500, title: '查询杰理版本', icon: 'none' })
+		uni.showToast({ duration: 500, title: '查询杰理版本', icon: 'none' })
 	}
 
 	const handleQueryLinux = () => {
-		uni.showToast({ duration: 1500, title: '查询富瀚版本', icon: 'none' })
+		uni.showToast({ duration: 500, title: '查询富瀚版本', icon: 'none' })
 	}
 
 	const handleQueryGx8002 = () => {
-		uni.showToast({ duration: 1500, title: '查询国新版本', icon: 'none' })
+		uni.showToast({ duration: 500, title: '查询国新版本', icon: 'none' })
 	}
 
 	const handleSend = () => {
 		if (!sendData.value.trim()) {
-			uni.showToast({ duration: 1500, title: '请输入发送数据', icon: 'none' })
+			uni.showToast({ duration: 500, title: '请输入发送数据', icon: 'none' })
 			return
 		}
-		uni.showToast({ duration: 1500, title: '数据已发送', icon: 'success' })
+		uni.showToast({ duration: 500, title: '数据已发送', icon: 'success' })
 	}
 
 	const handleTakePhoto = () => {
-		uni.showToast({ duration: 1500, title: '拍照', icon: 'none' })
+		uni.showToast({ duration: 500, title: '拍照', icon: 'none' })
 	}
 
 	const handleStartRecording = () => {
-		uni.showToast({ duration: 1500, title: '开始录像', icon: 'none' })
+		uni.showToast({ duration: 500, title: '开始录像', icon: 'none' })
 	}
 
 	const handleStopRecording = () => {
-		uni.showToast({ duration: 1500, title: '停止录像', icon: 'none' })
+		uni.showToast({ duration: 500, title: '停止录像', icon: 'none' })
 	}
 
 	const handleSetDuration = (duration) => {
-		uni.showToast({ duration: 1500, title: `录制时长: ${['未设置', '15秒', '1分钟', '3分钟', '5分钟', '10分钟'][duration]}`, icon: 'none' })
+		uni.showToast({ duration: 500, title: `录制时长: ${['未设置', '15秒', '1分钟', '3分钟', '5分钟', '10分钟'][duration]}`, icon: 'none' })
 	}
 	</script>
 
