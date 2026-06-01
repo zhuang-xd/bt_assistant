@@ -1,31 +1,76 @@
 <template>
-	<view class="content">
-		<view class="card">
-			<view class="button-group">
-				<button class="scan-btn" type="primary" @click="handleScanClick" :disabled="isScanning">
-					{{ isScanning ? '搜索中...' : '搜索蓝牙设备' }}
-				</button>
-				<button class="skip-btn" type="warn" @click="skipToDevice">
-					skip
-				</button>
+	<view class="page">
+		<!-- 顶部栏 -->
+		<view class="header">
+			<view class="header-icon">
+				<text class="icon-bt">&#x1F50C;</text>
+			</view>
+			<view class="header-info">
+				<text class="header-title">蓝牙助手</text>
+				<text class="header-subtitle">SPP 串口调试工具</text>
+			</view>
+		</view>
+
+		<!-- 操作区 -->
+		<view class="action-card">
+			<view class="status-bar" :class="{ scanning: isScanning }">
+				<view class="status-dot"></view>
+				<text class="status-text">{{ statusText }}</text>
 			</view>
 
-			<view class="status">{{ statusText }}</view>
+			<view class="button-group">
+				<button
+					class="scan-btn"
+					:class="{ scanning: isScanning }"
+					@click="handleScanClick"
+					:disabled="isScanning"
+				>
+					<text class="btn-icon">{{ isScanning ? '⏳' : '🔍' }}</text>
+					<text>{{ isScanning ? '搜索中...' : '搜索蓝牙设备' }}</text>
+				</button>
+				<button class="skip-btn" @click="skipToDevice">
+					<text class="btn-icon">⚙️</text>
+					<text>跳过</text>
+				</button>
+			</view>
+		</view>
+
+		<!-- 设备列表 -->
+		<view class="device-section">
+			<view class="section-header">
+				<text class="section-title">附近设备</text>
+				<text class="section-count" v-if="deviceList.length > 0">{{ deviceList.length }} 台</text>
+			</view>
 
 			<view v-if="deviceList.length === 0" class="empty">
-				暂无设备，点击上方按钮开始搜索
+				<text class="empty-icon">📡</text>
+				<text class="empty-title">暂无设备</text>
+				<text class="empty-desc">点击上方按钮开始搜索附近的蓝牙设备</text>
 			</view>
 
 			<scroll-view v-else class="device-list" scroll-y>
 				<view
-					v-for="device in deviceList"
+					v-for="(device, index) in deviceList"
 					:key="device.deviceId"
 					class="device-item"
+					:style="{ animationDelay: (index * 0.05) + 's' }"
 					@click="connectDevice(device)"
 				>
-					<view class="device-name">{{ device.name || '未命名设备' }}</view>
-					<view class="device-id">{{ device.deviceId }}</view>
-					<view class="device-rssi">{{ device.isBonded ? '已配对设备' : '未配对设备' }}</view>
+					<view class="device-left">
+						<view class="device-avatar" :class="{ bonded: device.isBonded }">
+							<text>{{ device.isBonded ? '🔗' : '📱' }}</text>
+						</view>
+					</view>
+					<view class="device-center">
+						<text class="device-name">{{ device.name || '未命名设备' }}</text>
+						<text class="device-id">{{ device.deviceId }}</text>
+					</view>
+					<view class="device-right">
+						<view class="device-tag" :class="{ bonded: device.isBonded }">
+							<text>{{ device.isBonded ? '已配对' : '未配对' }}</text>
+						</view>
+						<text class="device-arrow">›</text>
+					</view>
 				</view>
 			</scroll-view>
 		</view>
@@ -285,85 +330,356 @@ onUnload(() => {
 </script>
 
 <style lang="scss" scoped>
-.content {
+.page {
 	min-height: 100vh;
-	padding: 24rpx;
-	background: #f3f6fb;
+	background: linear-gradient(180deg, #eef1f9 0%, #f0f2f8 30%, #f5f6fa 100%);
+	padding: 0 24rpx;
+	padding-bottom: 48rpx;
 	box-sizing: border-box;
 }
 
-.card {
+/* 顶部栏 */
+.header {
+	display: flex;
+	align-items: center;
+	padding: 48rpx 16rpx 32rpx;
+	padding-top: calc(48rpx + var(--status-bar-height, 44px));
+	gap: 20rpx;
+}
+
+.header-icon {
+	width: 88rpx;
+	height: 88rpx;
+	border-radius: 24rpx;
+	background: linear-gradient(135deg, #4f6ef6 0%, #7b93ff 100%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 8rpx 24rpx rgba(79, 110, 246, 0.3);
+
+	.icon-bt {
+		font-size: 40rpx;
+	}
+}
+
+.header-info {
+	display: flex;
+	flex-direction: column;
+	gap: 4rpx;
+}
+
+.header-title {
+	font-size: 40rpx;
+	font-weight: 700;
+	color: #1a1a2e;
+	letter-spacing: 1rpx;
+}
+
+.header-subtitle {
+	font-size: 24rpx;
+	color: #8e8e9a;
+}
+
+/* 操作卡片 */
+.action-card {
 	background: #ffffff;
-	border-radius: 20rpx;
-	padding: 24rpx;
-	box-shadow: 0 8rpx 30rpx rgba(26, 44, 80, 0.08);
+	border-radius: 24rpx;
+	padding: 28rpx;
+	margin-bottom: 24rpx;
+	box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.04);
+}
+
+.status-bar {
+	display: flex;
+	align-items: center;
+	gap: 12rpx;
+	margin-bottom: 24rpx;
+	padding: 16rpx 20rpx;
+	background: #f8f9fd;
+	border-radius: 14rpx;
+	transition: all 0.3s ease;
+
+	&.scanning {
+		background: #eef3ff;
+		border: 1rpx solid #d4dfff;
+	}
+}
+
+.status-dot {
+	width: 14rpx;
+	height: 14rpx;
+	border-radius: 50%;
+	background: #d1d1d6;
+	flex-shrink: 0;
+	transition: all 0.3s ease;
+
+	.scanning & {
+		background: #4f6ef6;
+		animation: pulse 1.2s ease-in-out infinite;
+		box-shadow: 0 0 0 0 rgba(79, 110, 246, 0.5);
+	}
+}
+
+@keyframes pulse {
+	0% {
+		box-shadow: 0 0 0 0 rgba(79, 110, 246, 0.5);
+	}
+	70% {
+		box-shadow: 0 0 0 12rpx rgba(79, 110, 246, 0);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgba(79, 110, 246, 0);
+	}
+}
+
+.status-text {
+	font-size: 26rpx;
+	color: #6b6b7e;
+	line-height: 1.5;
+	flex: 1;
+
+	.scanning & {
+		color: #3a54d4;
+	}
 }
 
 .button-group {
 	display: flex;
-	gap: 12rpx;
-	margin-bottom: 20rpx;
+	gap: 16rpx;
 }
 
 .scan-btn {
-	grid-column: 1;
+	flex: 1;
+	height: 88rpx;
+	line-height: 88rpx;
+	border-radius: 20rpx;
+	font-size: 28rpx;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10rpx;
+	padding: 0 24rpx;
+	background: linear-gradient(135deg, #4f6ef6 0%, #6b85ff 100%);
+	color: #fff;
+	border: none;
+	box-shadow: 0 6rpx 20rpx rgba(79, 110, 246, 0.25);
+	transition: all 0.2s ease;
+
+	&::after {
+		border: none;
+	}
+
+	&:active {
+		transform: scale(0.97);
+		box-shadow: 0 3rpx 10rpx rgba(79, 110, 246, 0.2);
+	}
+
+	&[disabled] {
+		background: #d5d9eb;
+		color: #a0a4b8;
+		box-shadow: none;
+	}
+
+	.btn-icon {
+		font-size: 32rpx;
+	}
 }
 
 .skip-btn {
-	grid-column: 2;
-	width: 20%;
+	width: 160rpx;
+	height: 88rpx;
+	line-height: 88rpx;
+	border-radius: 20rpx;
+	font-size: 28rpx;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8rpx;
+	padding: 0;
+	background: #f5f6fa;
+	color: #5a5a6e;
+	border: none;
+	transition: all 0.2s ease;
+
+	&::after {
+		border: none;
+	}
+
+	&:active {
+		background: #ebedf5;
+		transform: scale(0.97);
+	}
+
+	.btn-icon {
+		font-size: 28rpx;
+	}
 }
 
-.status {
-	font-size: 26rpx;
-	color: #31415f;
-	margin-bottom: 18rpx; 
-	word-break: break-all;
+/* 设备列表区 */
+.device-section {
+	margin-top: 8rpx;
 }
 
+.section-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 8rpx;
+	margin-bottom: 20rpx;
+}
+
+.section-title {
+	font-size: 30rpx;
+	font-weight: 700;
+	color: #1a1a2e;
+}
+
+.section-count {
+	font-size: 24rpx;
+	color: #8e8e9a;
+	background: #eef1f9;
+	padding: 6rpx 16rpx;
+	border-radius: 20rpx;
+}
+
+/* 空状态 */
 .empty {
-	padding: 40rpx 0;
-	text-align: center;
-	font-size: 26rpx;
-	color: #7e8ca8;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 80rpx 40rpx;
+	background: #ffffff;
+	border-radius: 24rpx;
+	box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.04);
 }
 
+.empty-icon {
+	font-size: 80rpx;
+	margin-bottom: 20rpx;
+}
+
+.empty-title {
+	font-size: 30rpx;
+	font-weight: 600;
+	color: #1a1a2e;
+	margin-bottom: 12rpx;
+}
+
+.empty-desc {
+	font-size: 26rpx;
+	color: #8e8e9a;
+	text-align: center;
+	line-height: 1.6;
+}
+
+/* 设备列表 */
 .device-list {
-	max-height: 70vh;
+	max-height: 60vh;
 }
 
 .device-item {
-	padding: 20rpx;
-	border: 1rpx solid #dbe4f2;
-	border-radius: 14rpx;
-	margin-bottom: 16rpx;
-	background: #f9fbff;
+	display: flex;
+	align-items: center;
+	padding: 24rpx;
+	margin-bottom: 14rpx;
+	background: #ffffff;
+	border-radius: 20rpx;
+	box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.03);
+	gap: 18rpx;
+	transition: all 0.2s ease;
+	animation: fadeInUp 0.35s ease both;
+
+	&:active {
+		transform: scale(0.98);
+		background: #f8f9fd;
+		box-shadow: 0 4rpx 16rpx rgba(79, 110, 246, 0.08);
+	}
+}
+
+@keyframes fadeInUp {
+	from {
+		opacity: 0;
+		transform: translateY(20rpx);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.device-left {
+	flex-shrink: 0;
+}
+
+.device-avatar {
+	width: 80rpx;
+	height: 80rpx;
+	border-radius: 20rpx;
+	background: #f0f3ff;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 36rpx;
+	transition: all 0.25s ease;
+
+	&.bonded {
+		background: #e8f5e9;
+	}
+}
+
+.device-center {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6rpx;
 }
 
 .device-name {
 	font-size: 30rpx;
 	font-weight: 600;
-	color: #1f2f4d;
-	margin-bottom: 10rpx;
+	color: #1a1a2e;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
-.device-id,
-.device-rssi {
-	font-size: 24rpx;
-	color: #5f6f8f;
-	word-break: break-all;
+.device-id {
+	font-size: 22rpx;
+	color: #8e8e9a;
+	font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
-button {
-	width: 100%;
-	height: 88rpx;
-	line-height: 88rpx;
-	border-radius: 16rpx;
-	font-size: 30rpx;
-	font-weight: 600;
-	letter-spacing: 2rpx;
+.device-right {
 	display: flex;
-	align-items: center;
-	justify-content: center;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 10rpx;
+	flex-shrink: 0;
+}
+
+.device-tag {
+	padding: 6rpx 14rpx;
+	border-radius: 8rpx;
+	font-size: 20rpx;
+	font-weight: 500;
+	background: #f0f3ff;
+	color: #4f6ef6;
+
+	&.bonded {
+		background: #e8f5e9;
+		color: #34c759;
+	}
+}
+
+.device-arrow {
+	font-size: 32rpx;
+	color: #c8cce0;
+	font-weight: 300;
 }
 </style>

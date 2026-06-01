@@ -189,7 +189,7 @@ const handleClose = () => {
 .guide-item {
 	height: 100%;
 	border-radius: 22rpx;
-	background: linear-gradient(135deg, #1f4ed8 0%, #0f9cf3 100%);
+	background: linear-gradient(135deg, #4f6ef6 0%, #6b85ff 100%);
 	padding: 28rpx;
 	box-sizing: border-box;
 	display: flex;
