@@ -8,7 +8,7 @@
 			<view class="query-card">
 				<view class="query-result">
 					<text class="query-result-label">文件数量</text>
-					<text class="query-result-value">{{ filesCnt }}</text>
+					<text class="query-result-value" :class="{ loading: isTextValue }">{{ filesCnt }}</text>
 				</view>
 				<view class="query-actions">
 					<button class="action-btn danger" :disabled="isSending" @click="$emit('format')">
@@ -23,7 +23,9 @@
 	</template>
 
 	<script setup>
-	defineProps({
+	import { computed } from 'vue'
+
+	const props = defineProps({
 		filesCnt: {
 			type: [String, Number],
 			default: 0
@@ -33,6 +35,8 @@
 			default: false
 		}
 	})
+
+	const isTextValue = computed(() => typeof props.filesCnt === 'string' && isNaN(Number(props.filesCnt)))
 
 	defineEmits(['query', 'format'])
 	</script>
@@ -86,9 +90,15 @@
 	}
 
 	.query-result-value {
-		font-size: 34rpx;
-		font-weight: 800;
+		font-size: 26rpx;
+		font-weight: 600;
 		color: #4f6ef6;
+		min-width: 96rpx;
+		text-align: right;
+
+		&.loading {
+			font-size: 24rpx;
+		}
 	}
 
 	.query-actions {

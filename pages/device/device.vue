@@ -64,21 +64,42 @@
 			</scroll-view>
 
 			<!-- 新手引导弹窗 -->
-			<tutorial v-model="showGuidePanel" />
+			<tutorial v-model="showGuidePanel" :guideAck="guideAck" />
 		</view>
 	</template>
 
 	<script setup>
 	import { ref } from 'vue'
 	import { onLoad } from '@dcloudio/uni-app'
+	import Tutorial from '../../components/tutorial/tutorial.vue'
 	import CardDeviceInfo from '../../components/card-device-info/card-device-info.vue'
+	import CardMediaControl from '../../components/card-media-control/card-media-control.vue'
 	import CardEqSettings from '../../components/card-eq-settings/card-eq-settings.vue'
 	import CardFileQuery from '../../components/card-file-query/card-file-query.vue'
 	import CardVersionInfo from '../../components/card-version-info/card-version-info.vue'
-	import CardDataReceiver from '../../components/card-data-receiver/card-data-receiver.vue'
 	import CardDataSender from '../../components/card-data-sender/card-data-sender.vue'
-	import CardMediaControl from '../../components/card-media-control/card-media-control.vue'
-	import Tutorial from '../../components/tutorial/tutorial.vue'
+	import CardDataReceiver from '../../components/card-data-receiver/card-data-receiver.vue'
+	import { getSppState, sendSppHexCommand, buildSppHexCommandWithCrc, setOnSppReceive } from '../../utils/spp'
+
+	const COMMAND_CODES = {
+		QUERY_BATTERY: '05',
+		QUERY_FILES_CNT: '07',
+		APP_FORMAT: '08',
+		QUERY_BT_VERSION: '14',
+		QUERY_LINUX_VERSION: '15',
+		SET_RECORDING_DURATION: '25',
+		PHOTO: '60',
+		START_RECORDING: '61',
+		STOP_RECORDING: '62',
+		QUERY_GX8002_VERSION: '69',
+		SET_EQ: '82',
+		GET_EQ: '83',
+	}
+
+	const buildCommand = (code, len = '00', data = '') => {
+		const cmd = `AA 02 03 ${code} 00 ${len}${data ? ` ${data}` : ''}`
+		return buildSppHexCommandWithCrc(cmd)
+	}
 
 	const deviceName = ref('未获取到设备名称')
 	const deviceId = ref('')
@@ -94,69 +115,242 @@
 	const receivedData = ref('')
 	const sendData = ref('AA 02 03 07 00 00 D0 54')
 	const showGuidePanel = ref(false)
+	const guideAck = ref(null)
 
-	onLoad((options) => {
-		if (options?.deviceName) {
-			deviceName.value = decodeURIComponent(options.deviceName)
+	const parseFilesCountFromPacket = (bytes) => {
+		if (!Array.isArray(bytes) || bytes.length < 11) return null
+		for (let i = 0; i <= bytes.length - 11; i++) {
+			if (bytes[i] === 0xAA && bytes[i + 1] === 0x03 && bytes[i + 2] === 0x02 &&
+				bytes[i + 3] === 0x07 && bytes[i + 4] === 0x00 && bytes[i + 5] === 0x03 && bytes[i + 6] === 0x00) {
+				return bytes[i + 7] & 0xFF
+			}
 		}
-		if (options?.deviceId) {
-			deviceId.value = decodeURIComponent(options.deviceId)
-			statusText.value = '已连接'
+		return null
+	}
+
+	const parseFormatDoneFromPacket = (bytes) => {
+		if (!Array.isArray(bytes) || bytes.length < 7) return null
+		for (let i = 0; i <= bytes.length - 7; i++) {
+			if (bytes[i] === 0xAA && bytes[i + 1] === 0x03 && bytes[i + 2] === 0x02 &&
+				bytes[i + 3] === 0x08 && bytes[i + 4] === 0x00 && bytes[i + 5] === 0x01 && bytes[i + 6] === 0x01) {
+				return true
+			}
+		}
+		return null
+	}
+
+	const parseBatteryLevelFromPacket = (bytes) => {
+		if (!Array.isArray(bytes) || bytes.length < 5) return null
+		for (let i = 0; i <= bytes.length - 5; i++) {
+			if (bytes[i] !== 0xAA || bytes[i + 1] !== 0x03 || bytes[i + 2] !== 0x02) continue
+			const cmd = bytes[i + 3] & 0xFF
+			if (cmd !== 0x68 && cmd !== 0x05) continue
+			for (const off of [6, 5, 4]) {
+				const pos = i + off
+				if (pos >= 0 && pos < bytes.length) {
+					const val = bytes[pos] & 0xFF
+					if (val >= 0 && val <= 100) return val
+				}
+			}
+		}
+		return null
+	}
+
+	const parseCommandVersion = (bytes, commandCode) => {
+		if (!Array.isArray(bytes) || bytes.length < 8) return null
+		for (let i = 0; i <= bytes.length - 8; i++) {
+			if (bytes[i] !== 0xAA || bytes[i + 1] !== 0x03 || bytes[i + 2] !== 0x02 || bytes[i + 3] !== commandCode) continue
+			const versionBytes = []
+			for (let j = i + 6; j < bytes.length; j++) {
+				const b = bytes[j]
+				if ((b >= 0x30 && b <= 0x39) || b === 0x2E) {
+					versionBytes.push(b)
+				} else {
+					break
+				}
+			}
+			return String.fromCharCode(...versionBytes)
+		}
+		return null
+	}
+
+	const formatHexFrames = (bytes) => {
+		if (!Array.isArray(bytes) || bytes.length === 0) return ''
+		const hex = (b) => b.toString(16).toUpperCase().padStart(2, '0')
+		const starts = []
+		for (let i = 0; i <= bytes.length - 3; i++) {
+			if (bytes[i] === 0xAA && bytes[i + 1] === 0x03 && bytes[i + 2] === 0x02) {
+				starts.push(i)
+			}
+		}
+		if (starts.length === 0) return bytes.map(hex).join(' ')
+		const frames = []
+		for (let k = 0; k < starts.length; k++) {
+			const s = starts[k]
+			const e = k + 1 < starts.length ? starts[k + 1] : bytes.length
+			frames.push(bytes.slice(s, e).map(hex).join(' '))
+		}
+		return frames.join('\n')
+	}
+
+	const decodeParam = (value) => {
+		if (!value) return ''
+		try { return decodeURIComponent(value) } catch (e) { return value }
+	}
+
+	onLoad((options = {}) => {
+		const routeDeviceName = decodeParam(options.deviceName)
+		const routeDeviceId = decodeParam(options.deviceId)
+		const sppState = getSppState()
+
+		deviceName.value = routeDeviceName || sppState.deviceName || '未获取到设备名称'
+		deviceId.value = routeDeviceId || sppState.deviceId || ''
+		statusText.value = sppState.connected ? '已连接' : '未连接'
+
+		const commandHandlers = {
+			0x05: (bytes) => {
+				const level = parseBatteryLevelFromPacket(bytes)
+				if (level !== null) batteryLevel.value = `${level}%`
+			},
+			0x07: (bytes) => {
+				const count = parseFilesCountFromPacket(bytes)
+				if (count !== null) filesCnt.value = count
+			},
+			0x08: (bytes) => {
+				if (parseFormatDoneFromPacket(bytes)) filesCnt.value = 0
+			},
+			0x14: (bytes) => {
+				const version = parseCommandVersion(bytes, 0x14)
+				if (version) btVersion.value = version
+			},
+			0x15: (bytes) => {
+				const version = parseCommandVersion(bytes, 0x15)
+				if (version) linuxVersion.value = version
+			},
+			0x68: (bytes) => {
+				const level = parseBatteryLevelFromPacket(bytes)
+				if (level !== null) batteryLevel.value = `${level}%`
+			},
+			0x69: (bytes) => {
+				const version = parseCommandVersion(bytes, 0x69)
+				if (version) gx8002Version.value = version
+			},
+			0x81: (bytes, index) => {
+				guideAck.value = {
+					step: bytes[index + 6] & 0xFF,
+					result: bytes[index + 7] & 0xFF,
+					receivedAt: Date.now()
+				}
+			},
+			0x83: (bytes, index) => {
+				const eqValue = bytes[index + 6]
+				if (eqValue !== undefined) selectedEq.value = eqValue
+			},
+		}
+
+		const processSppDataFrame = (bytes) => {
+			receivedData.value += formatHexFrames(bytes) + '\n'
+			for (let i = 0; i <= bytes.length - 4; i++) {
+				if (bytes[i] === 0xAA && bytes[i + 1] === 0x03 && bytes[i + 2] === 0x02) {
+					const handler = commandHandlers[bytes[i + 3]]
+					if (handler) handler(bytes, i)
+				}
+			}
+		}
+
+		setOnSppReceive(processSppDataFrame)
+
+		if (sppState.connected) {
+			setTimeout(() => {
+				try {
+					sendSppHexCommand(buildCommand(COMMAND_CODES.QUERY_BATTERY))
+					sendSppHexCommand(buildCommand(COMMAND_CODES.GET_EQ))
+				} catch (e) { /* ignore */ }
+			}, 200)
 		}
 	})
+
+	const sendCaptureCommand = (command) => {
+		if (isSending.value) return
+		sendSppHexCommand(command)
+		uni.showToast({ title: '命令已发送', icon: 'success' })
+	}
 
 	const showGuide = () => {
 		showGuidePanel.value = true
 	}
 
 	const handleSetEq = (mode) => {
-		selectedEq.value = mode
-		uni.showToast({ duration: 500, title: `已切换音效: ${['标准', '澎湃', '静谧'][mode]}`, icon: 'none' })
+		const payload = Number(mode)
+		if (!Number.isInteger(payload) || payload < 0 || payload > 0xFF) {
+			uni.showToast({ title: 'eq参数无效', icon: 'none' })
+			return
+		}
+		selectedEq.value = payload
+		const eqHex = payload.toString(16).toUpperCase().padStart(2, '0')
+		sendCaptureCommand(buildCommand(COMMAND_CODES.SET_EQ, '01', eqHex))
 	}
 
 	const handleQueryFiles = () => {
-		uni.showToast({ duration: 500, title: '查询文件列表', icon: 'none' })
+		filesCnt.value = '查询中...'
+		sendCaptureCommand(buildCommand(COMMAND_CODES.QUERY_FILES_CNT))
 	}
 
 	const handleFormatFiles = () => {
-		filesCnt.value = 0
-		uni.showToast({ duration: 500, title: '已清空', icon: 'none' })
+		sendCaptureCommand(buildCommand(COMMAND_CODES.APP_FORMAT))
 	}
 
 	const handleQueryBt = () => {
-		uni.showToast({ duration: 500, title: '查询杰理版本', icon: 'none' })
+		btVersion.value = '查询中...'
+		sendCaptureCommand(buildCommand(COMMAND_CODES.QUERY_BT_VERSION))
 	}
 
 	const handleQueryLinux = () => {
-		uni.showToast({ duration: 500, title: '查询富瀚版本', icon: 'none' })
+		linuxVersion.value = '查询中...'
+		sendCaptureCommand(buildCommand(COMMAND_CODES.QUERY_LINUX_VERSION))
 	}
 
 	const handleQueryGx8002 = () => {
-		uni.showToast({ duration: 500, title: '查询国新版本', icon: 'none' })
+		gx8002Version.value = '查询中...'
+		sendCaptureCommand(buildCommand(COMMAND_CODES.QUERY_GX8002_VERSION))
 	}
 
 	const handleSend = () => {
-		if (!sendData.value.trim()) {
-			uni.showToast({ duration: 500, title: '请输入发送数据', icon: 'none' })
+		const command = sendData.value.trim()
+		if (!command) {
+			uni.showToast({ title: '请输入命令', icon: 'none' })
 			return
 		}
-		uni.showToast({ duration: 500, title: '数据已发送', icon: 'success' })
+		try {
+			sendSppHexCommand(command)
+			uni.showToast({ title: '命令已发送', icon: 'success' })
+		} catch (error) {
+			uni.showToast({ title: error?.message || '发送失败', icon: 'none' })
+		}
 	}
 
 	const handleTakePhoto = () => {
-		uni.showToast({ duration: 500, title: '拍照', icon: 'none' })
+		sendCaptureCommand(buildCommand(COMMAND_CODES.PHOTO))
 	}
 
 	const handleStartRecording = () => {
-		uni.showToast({ duration: 500, title: '开始录像', icon: 'none' })
+		sendCaptureCommand(buildCommand(COMMAND_CODES.START_RECORDING))
 	}
 
 	const handleStopRecording = () => {
-		uni.showToast({ duration: 500, title: '停止录像', icon: 'none' })
+		sendCaptureCommand(buildCommand(COMMAND_CODES.STOP_RECORDING))
 	}
 
 	const handleSetDuration = (duration) => {
-		uni.showToast({ duration: 500, title: `录制时长: ${['未设置', '15秒', '1分钟', '3分钟', '5分钟', '10分钟'][duration]}`, icon: 'none' })
+		const payload = Number(duration)
+		if (payload === 0) return
+		const actualValue = payload - 1
+		if (!Number.isInteger(actualValue) || actualValue < 0 || actualValue > 0xFF) {
+			uni.showToast({ title: '录制时长参数无效', icon: 'none' })
+			return
+		}
+		const durationHex = actualValue.toString(16).toUpperCase().padStart(2, '0')
+		sendCaptureCommand(buildCommand(COMMAND_CODES.SET_RECORDING_DURATION, '01', durationHex))
 	}
 	</script>
 
