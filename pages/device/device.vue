@@ -91,7 +91,7 @@
 		PHOTO: '60',
 		START_RECORDING: '61',
 		STOP_RECORDING: '62',
-		QUERY_GX8002_VERSION: '69',
+		QUERY_GX8002_VERSION: '80',
 		SET_EQ: '82',
 		GET_EQ: '83',
 	}
@@ -231,8 +231,8 @@
 				const level = parseBatteryLevelFromPacket(bytes)
 				if (level !== null) batteryLevel.value = `${level}%`
 			},
-			0x69: (bytes) => {
-				const version = parseCommandVersion(bytes, 0x69)
+			0x80: (bytes) => {
+				const version = parseCommandVersion(bytes, 0x80)
 				if (version) gx8002Version.value = version
 			},
 			0x81: (bytes, index) => {

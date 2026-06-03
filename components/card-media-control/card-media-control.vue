@@ -1,7 +1,11 @@
 <template>
 	<view class="card">
-		<view class="media-card">
+		<view class="card-header">
+			<text class="card-icon">📷</text>
 			<view class="title">媒体</view>
+		</view>
+
+		<view class="media-card">
 			<button type="primary" :disabled="isSending" @click="$emit('takePhoto')">
 				拍照
 			</button>
@@ -67,11 +71,21 @@ const handleDurationChange = (event) => {
 	margin-bottom: 10px;
 }
 
+.card-header {
+	display: flex;
+	align-items: center;
+	gap: 12rpx;
+	margin-bottom: 20rpx;
+}
+
+.card-icon {
+	font-size: 32rpx;
+}
+
 .title {
-	font-size: 34rpx;
-	font-weight: 600;
-	color: #1f2f4d;
-	margin-bottom: 18rpx;
+	font-size: 32rpx;
+	font-weight: 700;
+	color: #1a1a2e;
 }
 
 .media-card {
