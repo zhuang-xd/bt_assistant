@@ -5,9 +5,16 @@
 				<text class="card-icon">📟</text>
 				<text class="title">设备信息</text>
 			</view>
-			<view class="status-badge" :class="{ connected: statusText === '已连接' }">
-				<view class="badge-dot"></view>
-				<text>{{ statusText }}</text>
+			<view class="header-right">
+				<view class="status-badge" :class="{ connected: statusText === '已连接' }">
+					<view class="badge-dot"></view>
+					<text>{{ statusText }}</text>
+				</view>
+				<view class="status-badge" :class="{ connected: statusText === '已连接' }">
+					<view class="badge-dot"></view>
+					<text>电量</text>
+					<text>{{ batteryLevel }}</text>
+				</view>
 			</view>
 		</view>
 
@@ -23,21 +30,7 @@
 				<view class="item-icon">🪪</view>
 				<view class="item-content">
 					<text class="label">蓝牙地址</text>
-					<text class="value mono">{{ deviceId || '未获取到deviceId' }}</text>
-				</view>
-			</view>
-			<view class="device-item">
-				<view class="item-icon">🔗</view>
-				<view class="item-content">
-					<text class="label">连接状态</text>
-					<text class="value">{{ statusText }}</text>
-				</view>
-			</view>
-			<view class="device-item">
-				<view class="item-icon">🔋</view>
-				<view class="item-content">
-					<text class="label">电量</text>
-					<text class="value battery">{{ batteryLevel }}</text>
+					<text class="value">{{ deviceId || '未获取到deviceId' }}</text>
 				</view>
 			</view>
 		</view>
@@ -90,6 +83,12 @@ defineEmits(['openGuide'])
 	align-items: center;
 	justify-content: space-between;
 	margin-bottom: 20rpx;
+}
+
+.header-right {
+	display: flex;
+ 	align-items: center;
+ 	gap: 12rpx;
 }
 
 .card-title-row {
@@ -179,16 +178,6 @@ defineEmits(['openGuide'])
 	color: #1a1a2e;
 	font-weight: 600;
 	word-break: break-all;
-
-	&.mono {
-		font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
-		font-size: 22rpx;
-		font-weight: 500;
-	}
-
-	&.battery {
-		color: #4f6ef6;
-	}
 }
 
 .guide-btn {

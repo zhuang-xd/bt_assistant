@@ -46,6 +46,13 @@
 					@queryGx8002="handleQueryGx8002"
 				/>
 
+				<!-- 其他配置 -->
+				<card-others
+					:isSending="isSending"
+					:wearingStatus="wearingStatus"
+					@handleWearingStatus="handleSwitchWearing"
+				/>
+
 				<!-- 发送数据 -->
 				<card-data-sender
 					v-model="sendData"
@@ -79,6 +86,7 @@
 	import CardVersionInfo from '../../components/card-version-info/card-version-info.vue'
 	import CardDataSender from '../../components/card-data-sender/card-data-sender.vue'
 	import CardDataReceiver from '../../components/card-data-receiver/card-data-receiver.vue'
+	import CardOthers from '../../components/card-others/card-others.vue'
 	import { getSppState, sendSppHexCommand, buildSppHexCommandWithCrc, setOnSppReceive } from '../../utils/spp'
 
 	const COMMAND_CODES = {
@@ -94,6 +102,7 @@
 		QUERY_GX8002_VERSION: '80',
 		SET_EQ: '82',
 		GET_EQ: '83',
+		SWITCH_WEARING: '84',
 	}
 
 	const buildCommand = (code, len = '00', data = '') => {
@@ -108,12 +117,13 @@
 	const isSending = ref(false)
 
 	const selectedEq = ref(null)
-	const filesCnt = ref(0)
+const wearingStatus = ref(false)
+const filesCnt = ref(0)
 	const btVersion = ref('未查询')
 	const linuxVersion = ref('未查询')
 	const gx8002Version = ref('未查询')
 	const receivedData = ref('')
-	const sendData = ref('AA 02 03 07 00 00 D0 54')
+	const sendData = ref('AA 02 03 05 00 00 71 94') // 发送指令模块的默认内容
 	const showGuidePanel = ref(false)
 	const guideAck = ref(null)
 
@@ -313,6 +323,12 @@
 	const handleQueryGx8002 = () => {
 		gx8002Version.value = '查询中...'
 		sendCaptureCommand(buildCommand(COMMAND_CODES.QUERY_GX8002_VERSION))
+	}
+	const handleSwitchWearing = (status) => {
+		// status: true 开启佩戴检测, false 关闭佩戴检测
+		const commandData = status ? '01' : '00'
+		wearingStatus.value = status
+		sendCaptureCommand(buildCommand(COMMAND_CODES.SWITCH_WEARING, '01', commandData))
 	}
 
 	const handleSend = () => {
