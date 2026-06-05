@@ -218,6 +218,7 @@
 		try { return decodeURIComponent(value) } catch (e) { return value }
 	}
 
+	// 接收到录制时长的响应
 	const handleRecordDurationResponse = (bytes, index) => {
 		const durationValue = bytes[index + 6]
 		if (durationValue !== undefined && durationValue >= 0 && durationValue <= 4) {
