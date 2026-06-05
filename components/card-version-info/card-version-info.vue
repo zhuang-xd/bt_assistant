@@ -120,7 +120,6 @@
 		font-size: 24rpx;
 		font-weight: 600;
 		color: #4f6ef6;
-		font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;

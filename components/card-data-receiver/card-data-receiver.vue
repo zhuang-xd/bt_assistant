@@ -78,7 +78,8 @@ defineEmits(['clear'])
 
 .receive-box {
 	height: 300rpx;
-	background: #1a1a2e;
+	// background: #1a1a2e;
+	background: #f8f9fd;
 	border-radius: 16rpx;
 	padding: 20rpx;
 	box-sizing: border-box;
@@ -88,8 +89,7 @@ defineEmits(['clear'])
 
 .receive-text {
 	font-size: 24rpx;
-	color: #34c759;
-	font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+	// color: #34c759;
 	word-wrap: break-word;
 	white-space: pre-wrap;
 	line-height: 1.7;

@@ -102,7 +102,8 @@
 		QUERY_GX8002_VERSION: '80',
 		SET_EQ: '82',
 		GET_EQ: '83',
-		SWITCH_WEARING: '84',
+		SET_SWITCH_WEARING: '84',
+		GET_SWITCH_WEARING: '85',
 	}
 
 	const buildCommand = (code, len = '00', data = '') => {
@@ -256,6 +257,10 @@ const filesCnt = ref(0)
 				const eqValue = bytes[index + 6]
 				if (eqValue !== undefined) selectedEq.value = eqValue
 			},
+			0x85: (bytes, index) => {
+				const statusValue = bytes[index + 6]
+				if (statusValue !== undefined) wearingStatus.value = statusValue === 0x01
+			},
 		}
 
 		const processSppDataFrame = (bytes) => {
@@ -273,8 +278,9 @@ const filesCnt = ref(0)
 		if (sppState.connected) {
 			setTimeout(() => {
 				try {
-					sendSppHexCommand(buildCommand(COMMAND_CODES.QUERY_BATTERY))
-					sendSppHexCommand(buildCommand(COMMAND_CODES.GET_EQ))
+					sendSppHexCommand(buildCommand(COMMAND_CODES.QUERY_BATTERY)) // 查询电池电量
+					sendSppHexCommand(buildCommand(COMMAND_CODES.GET_EQ)) // 查询当前eq设置
+					sendSppHexCommand(buildCommand(COMMAND_CODES.GET_SWITCH_WEARING)) // 查询当前佩戴检测状态
 				} catch (e) { /* ignore */ }
 			}, 200)
 		}
@@ -328,7 +334,7 @@ const filesCnt = ref(0)
 		// status: true 开启佩戴检测, false 关闭佩戴检测
 		const commandData = status ? '01' : '00'
 		wearingStatus.value = status
-		sendCaptureCommand(buildCommand(COMMAND_CODES.SWITCH_WEARING, '01', commandData))
+		sendCaptureCommand(buildCommand(COMMAND_CODES.SET_SWITCH_WEARING, '01', commandData))
 	}
 
 	const handleSend = () => {

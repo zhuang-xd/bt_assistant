@@ -86,7 +86,6 @@
 		background: #f8f9fd;
 		font-size: 26rpx;
 		color: #1a1a2e;
-		font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
 		box-sizing: border-box;
 		transition: all 0.2s ease;
 

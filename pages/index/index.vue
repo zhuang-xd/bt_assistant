@@ -6,7 +6,7 @@
 				<text class="icon-bt">&#x1F50C;</text>
 			</view>
 			<view class="header-info">
-				<text class="header-title">蓝牙助手</text>
+				<text class="header-title">MOCO蓝牙助手</text>
 				<text class="header-subtitle">SPP 串口调试工具</text>
 			</view>
 		</view>
@@ -649,7 +649,6 @@ onUnload(() => {
 .device-id {
 	font-size: 22rpx;
 	color: #8e8e9a;
-	font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
