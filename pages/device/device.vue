@@ -135,6 +135,7 @@
 	const sendData = ref('AA 02 03 05 00 00 71 94') // 发送指令模块的默认内容
 	const showGuidePanel = ref(false)
 	const guideAck = ref(null)
+	let shouldQueryPhotoRecog2AfterRecordDuration = false
 
 	const parseFilesCountFromPacket = (bytes) => {
 		if (!Array.isArray(bytes) || bytes.length < 11) return null
@@ -217,6 +218,17 @@
 		try { return decodeURIComponent(value) } catch (e) { return value }
 	}
 
+	const handleRecordDurationResponse = (bytes, index) => {
+		const durationValue = bytes[index + 6]
+		if (durationValue !== undefined && durationValue >= 0 && durationValue <= 4) {
+			recordDuration.value = durationValue + 1
+			if (shouldQueryPhotoRecog2AfterRecordDuration) {
+				shouldQueryPhotoRecog2AfterRecordDuration = false
+				sendSppHexCommand(buildCommand(COMMAND_CODES.GET_PHOTO_RECOG2_RESOLUTION)) // 查询当前识图速度
+			}
+		}
+	}
+
 	onLoad((options = {}) => {
 		const routeDeviceName = decodeParam(options.deviceName)
 		const routeDeviceId = decodeParam(options.deviceId)
@@ -246,6 +258,7 @@
 				const version = parseCommandVersion(bytes, 0x15)
 				if (version) linuxVersion.value = version
 			},
+			0x25: handleRecordDurationResponse,
 			0x68: (bytes) => {
 				const level = parseBatteryLevelFromPacket(bytes)
 				if (level !== null) batteryLevel.value = `${level}%`
@@ -278,12 +291,7 @@
 				}
 			},
 			// 查询录制时长
-			0x87: (bytes, index) => {
-				const durationValue = bytes[index + 6]
-				if (durationValue !== undefined && durationValue >= 0 && durationValue <= 4) {
-					recordDuration.value = durationValue + 1
-				}
-			},
+			0x87: handleRecordDurationResponse,
 		}
 
 		const processSppDataFrame = (bytes) => {
@@ -304,7 +312,7 @@
 					sendSppHexCommand(buildCommand(COMMAND_CODES.QUERY_BATTERY)) // 查询电池电量
 					sendSppHexCommand(buildCommand(COMMAND_CODES.GET_EQ)) // 查询当前eq设置
 					sendSppHexCommand(buildCommand(COMMAND_CODES.GET_SWITCH_WEARING)) // 查询当前佩戴检测状态
-					sendSppHexCommand(buildCommand(COMMAND_CODES.GET_PHOTO_RECOG2_RESOLUTION)) // 查询当前识图速度
+					shouldQueryPhotoRecog2AfterRecordDuration = true
 					sendSppHexCommand(buildCommand(COMMAND_CODES.GET_RECORD_DURATION)) // 查询当前录制时长
 				} catch (e) { /* ignore */ }
 			}, 200)

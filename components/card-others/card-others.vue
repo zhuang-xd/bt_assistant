@@ -51,7 +51,6 @@
 					<view class="item-left">
 						<text class="item-icon">⏱</text>
 						<text class="item-label">录制时长</text>
-						<button class="query-btn" size="mini" :disabled="isSending" @click="queryRecordDuration">查询</button>
 					</view>
 					<view class="duration-options">
 						<view
