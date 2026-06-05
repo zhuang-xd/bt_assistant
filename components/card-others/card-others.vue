@@ -23,12 +23,32 @@
 					</view>
 				</view>
 			</view>
+
+			<!-- 识图速度 -->
+			<view class="item-row speed-row">
+				<view class="item-info speed-info">
+					<view class="item-left">
+						<text class="item-icon">⚡</text>
+						<text class="item-label">识图速度</text>
+					</view>
+					<view class="speed-options">
+						<view
+							v-for="option in speedOptions"
+							:key="option.value"
+							class="speed-option"
+							:class="{ active: photoRecog2Resolution === option.value, disabled: isSending }"
+							@click="selectSpeed(option.value)"
+						>
+							{{ option.label }}
+						</view>
+					</view>
+				</view>
+			</view>
 		</view>
 	</view>
 </template>
 
 <script setup>
-import { ref } from 'vue'
 
 const props = defineProps({
 	isSending: {
@@ -38,14 +58,30 @@ const props = defineProps({
 	wearingStatus: {
 		type: Boolean,
 		default: false
+	},
+	photoRecog2Resolution: {
+		type: Number,
+		default: 1
 	}
 })
 
-const emit = defineEmits(['handleWearingStatus'])
+const emit = defineEmits(['handleWearingStatus', 'setPhotoRecog2Resolution'])
+
+const speedOptions = [
+	{ label: '极速', value: 0 },
+	{ label: '标准', value: 1 },
+	{ label: '精细', value: 2 },
+	{ label: '极致', value: 3 }
+]
 
 const toggleWearing = () => {
 	if (props.isSending) return
 	emit('handleWearingStatus', !props.wearingStatus)
+}
+
+const selectSpeed = (value) => {
+	if (props.isSending || props.photoRecog2Resolution === value) return
+	emit('setPhotoRecog2Resolution', value)
 }
 </script>
 
@@ -159,6 +195,44 @@ const toggleWearing = () => {
 
 	&.active {
 		left: 40rpx;
+	}
+}
+
+.speed-info {
+	align-items: flex-start;
+	flex-direction: column;
+	gap: 18rpx;
+}
+
+.speed-options {
+	width: 100%;
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 10rpx;
+}
+
+.speed-option {
+	height: 56rpx;
+	border-radius: 12rpx;
+	background: #ffffff;
+	border: 1rpx solid #e7e9f3;
+	color: #6b6b7e;
+	font-size: 24rpx;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s ease;
+
+	&.active {
+		background: linear-gradient(135deg, #4f6ef6 0%, #6b85ff 100%);
+		border-color: #4f6ef6;
+		color: #ffffff;
+		box-shadow: 0 4rpx 12rpx rgba(79, 110, 246, 0.24);
+	}
+
+	&.disabled {
+		opacity: 0.6;
 	}
 }
 </style>

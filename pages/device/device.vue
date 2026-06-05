@@ -50,7 +50,9 @@
 				<card-others
 					:isSending="isSending"
 					:wearingStatus="wearingStatus"
+						:photoRecog2Resolution="photoRecog2Resolution"
 					@handleWearingStatus="handleSwitchWearing"
+						@setPhotoRecog2Resolution="handleSetPhotoRecog2Resolution"
 				/>
 
 				<!-- 发送数据 -->
@@ -104,6 +106,8 @@
 		GET_EQ: '83',
 		SET_SWITCH_WEARING: '84',
 		GET_SWITCH_WEARING: '85',
+		SET_PHOTO_RECOG2_RESOLUTION: '71',
+		GET_PHOTO_RECOG2_RESOLUTION: '86',
 	}
 
 	const buildCommand = (code, len = '00', data = '') => {
@@ -118,8 +122,9 @@
 	const isSending = ref(false)
 
 	const selectedEq = ref(null)
-const wearingStatus = ref(false)
-const filesCnt = ref(0)
+	const wearingStatus = ref(false)
+	const photoRecog2Resolution = ref(1)
+	const filesCnt = ref(0)
 	const btVersion = ref('未查询')
 	const linuxVersion = ref('未查询')
 	const gx8002Version = ref('未查询')
@@ -257,9 +262,17 @@ const filesCnt = ref(0)
 				const eqValue = bytes[index + 6]
 				if (eqValue !== undefined) selectedEq.value = eqValue
 			},
+			// 识图速度设置
 			0x85: (bytes, index) => {
 				const statusValue = bytes[index + 6]
 				if (statusValue !== undefined) wearingStatus.value = statusValue === 0x01
+			},
+			// 识图速度读取
+			0x86: (bytes, index) => {
+				const resolutionValue = bytes[index + 6]
+				if (resolutionValue !== undefined && resolutionValue >= 0 && resolutionValue <= 3) {
+					photoRecog2Resolution.value = resolutionValue
+				}
 			},
 		}
 
@@ -281,6 +294,7 @@ const filesCnt = ref(0)
 					sendSppHexCommand(buildCommand(COMMAND_CODES.QUERY_BATTERY)) // 查询电池电量
 					sendSppHexCommand(buildCommand(COMMAND_CODES.GET_EQ)) // 查询当前eq设置
 					sendSppHexCommand(buildCommand(COMMAND_CODES.GET_SWITCH_WEARING)) // 查询当前佩戴检测状态
+					sendSppHexCommand(buildCommand(COMMAND_CODES.GET_PHOTO_RECOG2_RESOLUTION)) // 查询当前识图速度
 				} catch (e) { /* ignore */ }
 			}, 200)
 		}
@@ -335,6 +349,17 @@ const filesCnt = ref(0)
 		const commandData = status ? '01' : '00'
 		wearingStatus.value = status
 		sendCaptureCommand(buildCommand(COMMAND_CODES.SET_SWITCH_WEARING, '01', commandData))
+	}
+
+	const handleSetPhotoRecog2Resolution = (speed) => {
+		const payload = Number(speed)
+		if (!Number.isInteger(payload) || payload < 0 || payload > 3) {
+			uni.showToast({ title: '识图速度参数无效', icon: 'none' })
+			return
+		}
+		photoRecog2Resolution.value = payload
+		const speedHex = payload.toString(16).toUpperCase().padStart(2, '0')
+		sendCaptureCommand(buildCommand(COMMAND_CODES.SET_PHOTO_RECOG2_RESOLUTION, '01', speedHex))
 	}
 
 	const handleSend = () => {
