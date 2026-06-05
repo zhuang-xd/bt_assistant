@@ -24,7 +24,6 @@
 					@takePhoto="handleTakePhoto"
 					@startRecording="handleStartRecording"
 					@stopRecording="handleStopRecording"
-					@setDuration="handleSetDuration"
 				/>
 
 				<!-- 文件查询 -->
@@ -51,8 +50,10 @@
 					:isSending="isSending"
 					:wearingStatus="wearingStatus"
 						:photoRecog2Resolution="photoRecog2Resolution"
+						:recordDuration="recordDuration"
 					@handleWearingStatus="handleSwitchWearing"
 						@setPhotoRecog2Resolution="handleSetPhotoRecog2Resolution"
+						@setRecordDuration="handleSetDuration"
 				/>
 
 				<!-- 发送数据 -->
@@ -108,6 +109,7 @@
 		GET_SWITCH_WEARING: '85',
 		SET_PHOTO_RECOG2_RESOLUTION: '71',
 		GET_PHOTO_RECOG2_RESOLUTION: '86',
+		GET_RECORD_DURATION: '87',
 	}
 
 	const buildCommand = (code, len = '00', data = '') => {
@@ -124,6 +126,7 @@
 	const selectedEq = ref(null)
 	const wearingStatus = ref(false)
 	const photoRecog2Resolution = ref(1)
+	const recordDuration = ref(0)
 	const filesCnt = ref(0)
 	const btVersion = ref('未查询')
 	const linuxVersion = ref('未查询')
@@ -274,6 +277,13 @@
 					photoRecog2Resolution.value = resolutionValue
 				}
 			},
+			// 查询录制时长
+			0x87: (bytes, index) => {
+				const durationValue = bytes[index + 6]
+				if (durationValue !== undefined && durationValue >= 0 && durationValue <= 4) {
+					recordDuration.value = durationValue + 1
+				}
+			},
 		}
 
 		const processSppDataFrame = (bytes) => {
@@ -295,6 +305,7 @@
 					sendSppHexCommand(buildCommand(COMMAND_CODES.GET_EQ)) // 查询当前eq设置
 					sendSppHexCommand(buildCommand(COMMAND_CODES.GET_SWITCH_WEARING)) // 查询当前佩戴检测状态
 					sendSppHexCommand(buildCommand(COMMAND_CODES.GET_PHOTO_RECOG2_RESOLUTION)) // 查询当前识图速度
+					sendSppHexCommand(buildCommand(COMMAND_CODES.GET_RECORD_DURATION)) // 查询当前录制时长
 				} catch (e) { /* ignore */ }
 			}, 200)
 		}
@@ -390,15 +401,16 @@
 
 	const handleSetDuration = (duration) => {
 		const payload = Number(duration)
-		if (payload === 0) return
 		const actualValue = payload - 1
 		if (!Number.isInteger(actualValue) || actualValue < 0 || actualValue > 0xFF) {
 			uni.showToast({ title: '录制时长参数无效', icon: 'none' })
 			return
 		}
+		recordDuration.value = payload
 		const durationHex = actualValue.toString(16).toUpperCase().padStart(2, '0')
 		sendCaptureCommand(buildCommand(COMMAND_CODES.SET_RECORDING_DURATION, '01', durationHex))
 	}
+
 	</script>
 
 	<style lang="scss" scoped>

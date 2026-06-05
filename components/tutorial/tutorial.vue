@@ -22,6 +22,7 @@
 
 <script setup>
 import {
+	onUnmounted,
 	ref,
 	watch
 } from 'vue'
@@ -56,6 +57,10 @@ const guideItems = [
 ]
 
 const currentStep = ref(1)
+const guideMusicStep = 4
+const guideAudioSrc = '/static/tutorial-step4.mp3'
+const pendingAudioStep = ref(null)
+let guideAudioContext = null
 
 const buildGuideCommand = (step, result) => buildSppHexCommandWithCrc(`AA 02 03 81 00 02 ${step.toString(16).toUpperCase().padStart(2, '0')} ${result.toString(16).toUpperCase().padStart(2, '0')}`)
 
@@ -75,12 +80,70 @@ const sendGuideStep = (step, result = 0) => {
 	}
 }
 
+const destroyGuideAudio = (clearPending = true) => {
+	if (!guideAudioContext) {
+		if (clearPending) pendingAudioStep.value = null
+		return
+	}
+	try {
+		guideAudioContext.stop()
+		guideAudioContext.destroy()
+	} catch (error) {
+		// ignore audio cleanup errors
+	}
+	guideAudioContext = null
+	if (clearPending) pendingAudioStep.value = null
+}
+
+const playGuideAudio = () => new Promise((resolve) => {
+	destroyGuideAudio(false)
+	if (!uni.createInnerAudioContext) {
+		resolve()
+		return
+	}
+
+	let settled = false
+	const finish = () => {
+		if (settled) {
+			return
+		}
+		settled = true
+		resolve()
+	}
+
+	guideAudioContext = uni.createInnerAudioContext()
+	guideAudioContext.src = guideAudioSrc
+	guideAudioContext.autoplay = false
+	guideAudioContext.obeyMuteSwitch = false
+	guideAudioContext.onEnded(finish)
+	guideAudioContext.onError(finish)
+
+	try {
+		guideAudioContext.play()
+	} catch (error) {
+		finish()
+	}
+})
+
+const advanceGuideStep = () => {
+	if (currentStep.value >= guideItems.length) {
+		sendGuideStep(0, 0)
+		emit('update:modelValue', false)
+		return
+	}
+
+	currentStep.value += 1
+	sendGuideStep(currentStep.value, 0)
+}
+
 watch(
 	() => props.modelValue,
 	(isVisible) => {
 		if (!isVisible) {
+			destroyGuideAudio()
 			return
 		}
+		destroyGuideAudio()
 		currentStep.value = 1
 		sendGuideStep(1, 0)
 	},
@@ -102,14 +165,22 @@ watch(
 			return
 		}
 
-		if (currentStep.value >= guideItems.length) {
-			sendGuideStep(0, 0)
-			emit('update:modelValue', false)
+		if (currentStep.value === guideMusicStep) {
+			if (pendingAudioStep.value === guideMusicStep) {
+				return
+			}
+			pendingAudioStep.value = guideMusicStep
+			playGuideAudio().then(() => {
+				if (!props.modelValue || currentStep.value !== guideMusicStep || pendingAudioStep.value !== guideMusicStep) {
+					return
+				}
+				pendingAudioStep.value = null
+				advanceGuideStep()
+			})
 			return
 		}
 
-		currentStep.value += 1
-		sendGuideStep(currentStep.value, 0)
+		advanceGuideStep()
 	},
 	{
 		deep: false
@@ -117,15 +188,19 @@ watch(
 )
 
 const handleSwiperChange = (event) => {
+	destroyGuideAudio()
 	const nextStep = (event?.detail?.current ?? 0) + 1
 	currentStep.value = nextStep
 	sendGuideStep(nextStep, 0)
 }
 
 const handleClose = () => {
+	destroyGuideAudio()
 	emit('update:modelValue', false)
 	sendGuideStep(0, 0)
 }
+
+onUnmounted(destroyGuideAudio)
 </script>
 
 <style lang="scss" scoped>

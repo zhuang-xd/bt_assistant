@@ -44,6 +44,28 @@
 					</view>
 				</view>
 			</view>
+
+			<!-- 录制时长 -->
+			<view class="item-row duration-row">
+				<view class="item-info duration-info">
+					<view class="item-left">
+						<text class="item-icon">⏱</text>
+						<text class="item-label">录制时长</text>
+						<button class="query-btn" size="mini" :disabled="isSending" @click="queryRecordDuration">查询</button>
+					</view>
+					<view class="duration-options">
+						<view
+							v-for="option in recordDurationOptions"
+							:key="option.value"
+							class="duration-option"
+							:class="{ active: recordDuration === option.value, disabled: isSending }"
+							@click="selectRecordDuration(option.value)"
+						>
+							{{ option.label }}
+						</view>
+					</view>
+				</view>
+			</view>
 		</view>
 	</view>
 </template>
@@ -62,16 +84,28 @@ const props = defineProps({
 	photoRecog2Resolution: {
 		type: Number,
 		default: 1
+	},
+	recordDuration: {
+		type: Number,
+		default: 0
 	}
 })
 
-const emit = defineEmits(['handleWearingStatus', 'setPhotoRecog2Resolution'])
+const emit = defineEmits(['handleWearingStatus', 'setPhotoRecog2Resolution', 'setRecordDuration'])
 
 const speedOptions = [
 	{ label: '极速', value: 0 },
 	{ label: '标准', value: 1 },
 	{ label: '精细', value: 2 },
 	{ label: '极致', value: 3 }
+]
+
+const recordDurationOptions = [
+	{ label: '15秒', value: 1 },
+	{ label: '1分钟', value: 2 },
+	{ label: '3分钟', value: 3 },
+	{ label: '5分钟', value: 4 },
+	{ label: '10分钟', value: 5 }
 ]
 
 const toggleWearing = () => {
@@ -82,6 +116,11 @@ const toggleWearing = () => {
 const selectSpeed = (value) => {
 	if (props.isSending || props.photoRecog2Resolution === value) return
 	emit('setPhotoRecog2Resolution', value)
+}
+
+const selectRecordDuration = (value) => {
+	if (props.isSending || props.recordDuration === value) return
+	emit('setRecordDuration', value)
 }
 </script>
 
@@ -204,14 +243,23 @@ const selectSpeed = (value) => {
 	gap: 18rpx;
 }
 
-.speed-options {
+.speed-options,
+.duration-options {
 	width: 100%;
 	display: grid;
-	grid-template-columns: repeat(4, minmax(0, 1fr));
 	gap: 10rpx;
 }
 
-.speed-option {
+.speed-options {
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.duration-options {
+	grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.speed-option,
+.duration-option {
 	height: 56rpx;
 	border-radius: 12rpx;
 	background: #ffffff;
@@ -235,4 +283,11 @@ const selectSpeed = (value) => {
 		opacity: 0.6;
 	}
 }
+
+.duration-info {
+	align-items: flex-start;
+	flex-direction: column;
+	gap: 18rpx;
+}
+
 </style>
