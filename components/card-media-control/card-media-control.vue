@@ -2,20 +2,45 @@
 	<view class="card">
 		<view class="card-header">
 			<text class="card-icon">📷</text>
-			<view class="title">媒体</view>
+			<text class="title">媒体控制</text>
 		</view>
 
-		<view class="media-card">
-			<button type="primary" :disabled="isSending" @click="$emit('takePhoto')">
-				拍照
-			</button>
-			<view class="general-card">
-				<button type="primary" :disabled="isSending" @click="$emit('startRecording')">
-					开始录像
-				</button>
-				<button class="media-btn btn" type="primary" :disabled="isSending" @click="$emit('stopRecording')">
-					停止录像
-				</button>
+		<!-- 拍照 - 独立一行，横向布局 -->
+		<view
+			class="media-btn photo-btn"
+			:class="{ disabled: isSending }"
+			@click="!isSending && $emit('takePhoto')"
+		>
+			<view class="photo-inner">
+				<text class="media-icon">📸</text>
+				<text class="media-label">拍照</text>
+				<text class="media-desc">远程拍摄</text>
+			</view>
+		</view>
+
+		<!-- 录像 + 停止 - 并排一行 -->
+		<view class="media-row">
+			<view
+				class="media-btn"
+				:class="{ disabled: isSending }"
+				@click="!isSending && $emit('startRecording')"
+			>
+				<view class="media-btn-inner">
+					<text class="media-icon">🎬</text>
+					<text class="media-label">录像</text>
+					<text class="media-desc">开始录制</text>
+				</view>
+			</view>
+			<view
+				class="media-btn"
+				:class="{ disabled: isSending }"
+				@click="!isSending && $emit('stopRecording')"
+			>
+				<view class="media-btn-inner">
+					<text class="media-icon">⏹</text>
+					<text class="media-label">停止</text>
+					<text class="media-desc">结束录制</text>
+				</view>
 			</view>
 		</view>
 	</view>
@@ -35,10 +60,10 @@ defineEmits(['takePhoto', 'startRecording', 'stopRecording'])
 <style lang="scss" scoped>
 .card {
 	background: #ffffff;
-	border-radius: 20rpx;
+	border-radius: 24rpx;
 	padding: 28rpx;
-	box-shadow: 0 8rpx 30rpx rgba(26, 44, 80, 0.08);
-	margin-bottom: 10px;
+	box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.04);
+	margin-bottom: 20rpx;
 }
 
 .card-header {
@@ -58,46 +83,65 @@ defineEmits(['takePhoto', 'startRecording', 'stopRecording'])
 	color: #1a1a2e;
 }
 
-.media-card {
+.media-row {
 	display: flex;
-	margin: 12rpx;
-	flex-direction: column;
-	gap: 16rpx;
+	gap: 14rpx;
 }
 
-.general-card {
-	display: flex;
-	gap: 16rpx;
+.photo-btn {
+	margin-bottom: 14rpx;
+	padding: 16rpx 20rpx;
+
+	.photo-inner {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 12rpx;
+	}
 }
 
 .media-btn {
-	width: 100%;
+	flex: 1;
+	position: relative;
+	padding: 24rpx 16rpx;
+	border-radius: 18rpx;
+	background: #f8f9fd;
+	border: 2rpx solid transparent;
+	transition: all 0.25s ease;
+	overflow: hidden;
+
+	&:active:not(.disabled) {
+		transform: scale(0.96);
+		background: linear-gradient(135deg, #eef3ff 0%, #e8edff 100%);
+		border-color: #4f6ef6;
+		box-shadow: 0 4rpx 16rpx rgba(79, 110, 246, 0.12);
+	}
+
+	&.disabled {
+		opacity: 0.5;
+	}
 }
 
-.btn {
-	width: 100%;
-	height: 88rpx;
-	line-height: 88rpx;
-	border-radius: 16rpx;
-	font-size: 30rpx;
-	font-weight: 600;
-	letter-spacing: 2rpx;
+.media-btn-inner {
 	display: flex;
+	flex-direction: column;
 	align-items: center;
-	justify-content: center;
+	gap: 8rpx;
 }
 
-button {
-	width: 100%;
-	height: 88rpx;
-	line-height: 88rpx;
-	border-radius: 16rpx;
-	font-size: 30rpx;
-	font-weight: 600;
-	letter-spacing: 2rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
+.media-icon {
+	font-size: 40rpx;
+	margin-bottom: 4rpx;
 }
 
+.media-label {
+	font-size: 28rpx;
+	font-weight: 700;
+	color: #3a3a4e;
+}
+
+.media-desc {
+	font-size: 20rpx;
+	color: #b0b0bc;
+}
 </style>

@@ -11,6 +11,14 @@
 					@openGuide="showGuide"
 				/>
 
+				<!-- 媒体控制 -->
+				<card-media-control
+					:isSending="isSending"
+					@takePhoto="handleTakePhoto"
+					@startRecording="handleStartRecording"
+					@stopRecording="handleStopRecording"
+				/>
+
 				<!-- 音效设置 -->
 				<card-eq-settings
 					:selectedEq="selectedEq"
@@ -18,12 +26,16 @@
 					@setEq="handleSetEq"
 				/>
 
-				<!-- 媒体控制 -->
-				<card-media-control
+
+				<!-- 其他配置 -->
+				<card-others
 					:isSending="isSending"
-					@takePhoto="handleTakePhoto"
-					@startRecording="handleStartRecording"
-					@stopRecording="handleStopRecording"
+					:wearingStatus="wearingStatus"
+						:photoRecog2Resolution="photoRecog2Resolution"
+						:recordDuration="recordDuration"
+					@handleWearingStatus="handleSwitchWearing"
+						@setPhotoRecog2Resolution="handleSetPhotoRecog2Resolution"
+						@setRecordDuration="handleSetDuration"
 				/>
 
 				<!-- 文件查询 -->
@@ -45,16 +57,6 @@
 					@queryGx8002="handleQueryGx8002"
 				/>
 
-				<!-- 其他配置 -->
-				<card-others
-					:isSending="isSending"
-					:wearingStatus="wearingStatus"
-						:photoRecog2Resolution="photoRecog2Resolution"
-						:recordDuration="recordDuration"
-					@handleWearingStatus="handleSwitchWearing"
-						@setPhotoRecog2Resolution="handleSetPhotoRecog2Resolution"
-						@setRecordDuration="handleSetDuration"
-				/>
 
 				<!-- 发送数据 -->
 				<card-data-sender
@@ -125,7 +127,7 @@
 
 	const selectedEq = ref(null)
 	const wearingStatus = ref(false)
-	const photoRecog2Resolution = ref(1)
+	const photoRecog2Resolution = ref(null)
 	const recordDuration = ref(0)
 	const filesCnt = ref(0)
 	const btVersion = ref('未查询')

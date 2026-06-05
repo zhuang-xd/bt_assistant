@@ -24,6 +24,27 @@
 				</view>
 			</view>
 
+			<!-- 录制时长 -->
+			<view class="item-row duration-row">
+				<view class="item-info duration-info">
+					<view class="item-left">
+						<text class="item-icon">⏱</text>
+						<text class="item-label">录制时长</text>
+					</view>
+					<view class="duration-options">
+						<view
+							v-for="option in recordDurationOptions"
+							:key="option.value"
+							class="duration-option"
+							:class="{ active: recordDuration === option.value, disabled: isSending }"
+							@click="selectRecordDuration(option.value)"
+						>
+							{{ option.label }}
+						</view>
+					</view>
+				</view>
+			</view>
+
 			<!-- 识图速度 -->
 			<view class="item-row speed-row">
 				<view class="item-info speed-info">
@@ -45,26 +66,6 @@
 				</view>
 			</view>
 
-			<!-- 录制时长 -->
-			<view class="item-row duration-row">
-				<view class="item-info duration-info">
-					<view class="item-left">
-						<text class="item-icon">⏱</text>
-						<text class="item-label">录制时长</text>
-					</view>
-					<view class="duration-options">
-						<view
-							v-for="option in recordDurationOptions"
-							:key="option.value"
-							class="duration-option"
-							:class="{ active: recordDuration === option.value, disabled: isSending }"
-							@click="selectRecordDuration(option.value)"
-						>
-							{{ option.label }}
-						</view>
-					</view>
-				</view>
-			</view>
 		</view>
 	</view>
 </template>
@@ -82,7 +83,7 @@ const props = defineProps({
 	},
 	photoRecog2Resolution: {
 		type: Number,
-		default: 1
+		default: null
 	},
 	recordDuration: {
 		type: Number,
